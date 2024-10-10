@@ -84,9 +84,7 @@ namespace PlaylistPlayer
                     async (int categoryId, MusicDbContext dbContext) =>
                     {
                         var category = await dbContext.Categories.FindAsync(categoryId);
-                        return category == null
-                            ? Results.NotFound()
-                            : TypedResults.Ok(category.ToDto());
+                        return category == null ? Results.NotFound() : Results.Ok(category.ToDto());
                     }
                 )
                 .WithName("GetCategory")
@@ -328,11 +326,17 @@ namespace PlaylistPlayer
                         MusicDbContext dbContext
                     ) =>
                     {
-                        var playlist = await dbContext.Playlists.FirstOrDefaultAsync(
-                            p => p.CategoryId == categoryId && p.Id == playlistId
-                        );
+                        var playlist = await dbContext.Playlists
+                            .Include(p => p.Songs)
+                            .FirstOrDefaultAsync(
+                                p => p.CategoryId == categoryId && p.Id == playlistId
+                            );
+
                         if (playlist == null)
                             return Results.NotFound("Playlist not found");
+
+                        var newOrderId =
+                            playlist.Songs.Count > 0 ? playlist.Songs.Max(s => s.OrderId) + 1 : 1;
 
                         var song = new Song
                         {
@@ -340,8 +344,10 @@ namespace PlaylistPlayer
                             Artist = dto.Artist,
                             Duration = dto.Duration,
                             PlaylistId = playlistId,
-                            CreatedAt = DateTimeOffset.UtcNow
+                            CreatedAt = DateTimeOffset.UtcNow,
+                            OrderId = newOrderId
                         };
+
                         dbContext.Songs.Add(song);
                         await dbContext.SaveChangesAsync();
 
@@ -370,12 +376,37 @@ namespace PlaylistPlayer
                                 && s.PlaylistId == playlistId
                                 && s.Id == songId
                         );
+
                         if (song == null)
                             return Results.NotFound();
 
+                        // Update song properties
                         song.Title = dto.Title;
                         song.Artist = dto.Artist;
                         song.Duration = dto.Duration;
+
+                        // Handle OrderId change
+                        if (song.OrderId != dto.OrderId)
+                        {
+                            var playlistSongs = await dbContext.Songs
+                                .Where(s => s.PlaylistId == playlistId)
+                                .OrderBy(s => s.OrderId)
+                                .ToListAsync();
+
+                            // Remove the song from its current position
+                            playlistSongs.Remove(song);
+
+                            // Insert the song at the new position
+                            int newIndex = Math.Min(dto.OrderId - 1, playlistSongs.Count);
+                            playlistSongs.Insert(newIndex, song);
+
+                            // Update OrderId for all songs in the playlist
+                            for (int i = 0; i < playlistSongs.Count; i++)
+                            {
+                                playlistSongs[i].OrderId = i + 1;
+                            }
+                        }
+
                         await dbContext.SaveChangesAsync();
 
                         return TypedResults.Ok(song.ToDto());

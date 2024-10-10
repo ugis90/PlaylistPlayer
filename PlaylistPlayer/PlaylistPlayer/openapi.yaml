@@ -353,6 +353,9 @@ components:
         duration:
           type: integer
           description: Duration in seconds
+        orderId:
+          type: integer
+          description: The order of the song within the playlist
         createdOn:
           type: string
           format: date-time
@@ -385,6 +388,7 @@ components:
         - title
         - artist
         - duration
+        - orderId
       properties:
         title:
           type: string
@@ -398,6 +402,10 @@ components:
           type: integer
           minimum: 1
           description: Duration in seconds
+        orderId:
+          type: integer
+          minimum: 1
+          description: The new order of the song within the playlist
 
     link:
       type: object

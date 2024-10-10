@@ -3,7 +3,7 @@ using System.Text;
 
 namespace PlaylistPlayer.Helpers;
 
-public class ETagGenerator
+public static class ETagGenerator
 {
     public static string GetETag(string key, byte[] contentBytes)
     {
@@ -17,7 +17,7 @@ public class ETagGenerator
     {
         var combined = new byte[a.Length + b.Length];
         Buffer.BlockCopy(a, 0, combined, 0, a.Length);
-        Buffer.BlockCopy(b, 0, combined, a.Length, a.Length);
+        Buffer.BlockCopy(b, 0, combined, a.Length, b.Length);
 
         return combined;
     }
@@ -26,8 +26,6 @@ public class ETagGenerator
     {
         using var md5 = MD5.Create();
         var md5Hash = md5.ComputeHash(combinedBytes);
-        var hex = BitConverter.ToString(md5Hash);
-
-        return hex.Replace("-", "");
+        return $"\"{Convert.ToBase64String(md5Hash)}\"";
     }
 }

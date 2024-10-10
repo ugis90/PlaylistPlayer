@@ -14,10 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddDbContext<MusicDbContext>();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
-builder.Services.AddFluentValidationAutoValidation(configuration =>
-{
-    configuration.OverrideDefaultResultFactoryWith<ProblemDetailsResultFactory>();
-});
+builder.Services.AddFluentValidationAutoValidation(
+    configuration => configuration.OverrideDefaultResultFactoryWith<ProblemDetailsResultFactory>()
+);
 builder.Services.AddResponseCaching();
 
 var app = builder.Build();
@@ -73,13 +72,17 @@ public class ProblemDetailsResultFactory : IFluentValidationAutoValidationResult
 }
 
 // DTOs
-public record UpdateSongDto(string Title, string Artist, int Duration);
+public record UpdateCategoryDto(string Description);
 
-public record CreateSongDto(string Title, string Artist, int Duration);
+public record CreateCategoryDto(string Name, string Description);
 
 public record UpdatePlaylistDto(string Name, string Description);
 
 public record CreatePlaylistDto(string Name, string Description);
+
+public record CreateSongDto(string Title, string Artist, int Duration);
+
+public record UpdateSongDto(string Title, string Artist, int Duration, int OrderId);
 
 public record CategoryDto(int Id, string Name, string Description, DateTimeOffset CreatedOn);
 
@@ -97,32 +100,27 @@ public record SongDto(
     string Artist,
     int Duration,
     DateTimeOffset CreatedOn,
-    int PlaylistId
+    int PlaylistId,
+    int OrderId
 );
 
 // DTO Validators
-public record CreateCategoryDto(string Name, string Description)
+public class CreateCategoryDtoValidator : AbstractValidator<CreateCategoryDto>
 {
-    public class CreateCategoryDtoValidator : AbstractValidator<CreateCategoryDto>
+    public CreateCategoryDtoValidator()
     {
-        public CreateCategoryDtoValidator()
-        {
-            RuleFor(x => x.Name).NotEmpty().Length(min: 2, max: 100);
-            RuleFor(x => x.Description).NotEmpty().Length(min: 5, max: 300);
-        }
+        RuleFor(x => x.Name).NotEmpty().Length(min: 2, max: 100);
+        RuleFor(x => x.Description).NotEmpty().Length(min: 5, max: 300);
     }
-};
+}
 
-public record UpdateCategoryDto(string Description)
+public class UpdateCategoryDtoValidator : AbstractValidator<UpdateCategoryDto>
 {
-    public class UpdateCategoryDtoValidator : AbstractValidator<UpdateCategoryDto>
+    public UpdateCategoryDtoValidator()
     {
-        public UpdateCategoryDtoValidator()
-        {
-            RuleFor(x => x.Description).NotEmpty().Length(min: 5, max: 300);
-        }
+        RuleFor(x => x.Description).NotEmpty().Length(min: 5, max: 300);
     }
-};
+}
 
 public class CreatePlaylistDtoValidator : AbstractValidator<CreatePlaylistDto>
 {
@@ -159,5 +157,6 @@ public class UpdateSongDtoValidator : AbstractValidator<UpdateSongDto>
         RuleFor(x => x.Title).NotEmpty().Length(1, 200);
         RuleFor(x => x.Artist).NotEmpty().Length(1, 100);
         RuleFor(x => x.Duration).GreaterThan(0);
+        RuleFor(x => x.OrderId).GreaterThan(0);
     }
 }

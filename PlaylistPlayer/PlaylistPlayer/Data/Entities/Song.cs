@@ -7,12 +7,13 @@ public class Song
     public required string Artist { get; set; }
     public required int Duration { get; set; }
     public required DateTimeOffset CreatedAt { get; set; }
+    public required int OrderId { get; set; }
 
     public int PlaylistId { get; set; }
     public Playlist Playlist { get; set; } = null!;
 
     public SongDto ToDto()
     {
-        return new SongDto(Id, Title, Artist, Duration, CreatedAt, PlaylistId);
+        return new SongDto(Id, Title, Artist, Duration, CreatedAt, PlaylistId, OrderId);
     }
 }

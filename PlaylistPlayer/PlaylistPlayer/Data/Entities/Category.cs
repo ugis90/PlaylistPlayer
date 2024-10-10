@@ -7,8 +7,7 @@ public class Category
     public required string Description { get; set; }
     public required DateTimeOffset CreatedAt { get; set; }
 
-    // Only can be set/seen by admin
-    public bool IsBlocked { get; set; }
+    public bool IsBlocked { get; set; } // Only can be set/seen by admin
 
     public ICollection<Playlist> Playlists { get; set; } = new List<Playlist>();
 
