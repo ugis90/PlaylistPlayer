@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using PlaylistPlayer;
 using PlaylistPlayer.Data;
@@ -5,7 +6,12 @@ using PlaylistPlayer.Data.Entities;
 using PlaylistPlayer.Helpers;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using PlaylistPlayer.Auth;
+using PlaylistPlayer.Auth.Model;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Results;
 using SharpGrip.FluentValidation.AutoValidation.Shared.Extensions;
@@ -18,13 +24,50 @@ builder.Services.AddFluentValidationAutoValidation(
     configuration => configuration.OverrideDefaultResultFactoryWith<ProblemDetailsResultFactory>()
 );
 builder.Services.AddResponseCaching();
+builder.Services.AddTransient<JwtTokenService>();
+builder.Services.AddTransient<SessionService>();
+builder.Services.AddScoped<AuthSeeder>();
+
+builder.Services
+    .AddIdentity<MusicUser, IdentityRole>()
+    .AddEntityFrameworkStores<MusicDbContext>()
+    .AddDefaultTokenProviders();
+
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters.ValidAudience = builder.Configuration[
+            "Jwt:ValidAudience"
+        ];
+        options.TokenValidationParameters.ValidIssuer = builder.Configuration["Jwt:ValidIssuer"];
+        options.TokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"])
+        );
+    });
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+using var scope = app.Services.CreateScope();
+
+//var dbContext = scope.ServiceProvider.GetRequiredService<MusicDbContext>();
+
+var dbSeeder = scope.ServiceProvider.GetRequiredService<AuthSeeder>();
+await dbSeeder.SeedAsync();
 
 app.AddCategoryApi();
 app.AddPlaylistApi();
 app.AddSongApi();
 
+app.AddAuthApi();
 app.MapGet(
         "api",
         (HttpContext httpContext, LinkGenerator linkGenerator) =>
@@ -49,6 +92,8 @@ app.MapGet(
 
 app.MapControllers();
 app.UseResponseCaching();
+app.UseAuthentication();
+app.UseAuthorization();
 app.Run();
 
 public class ProblemDetailsResultFactory : IFluentValidationAutoValidationResultFactory

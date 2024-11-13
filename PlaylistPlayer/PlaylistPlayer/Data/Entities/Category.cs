@@ -1,4 +1,7 @@
-﻿namespace PlaylistPlayer.Data.Entities;
+﻿using System.ComponentModel.DataAnnotations;
+using PlaylistPlayer.Auth.Model;
+
+namespace PlaylistPlayer.Data.Entities;
 
 public class Category
 {
@@ -10,6 +13,10 @@ public class Category
     public bool IsBlocked { get; set; } // Only can be set/seen by admin
 
     public ICollection<Playlist> Playlists { get; set; } = new List<Playlist>();
+
+    [Required]
+    public required string UserId { get; set; }
+    public MusicUser User { get; set; }
 
     public CategoryDto ToDto()
     {

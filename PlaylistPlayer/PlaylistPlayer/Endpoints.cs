@@ -1,6 +1,12 @@
+using System.Net.Http;
+using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.JsonWebTokens;
+using PlaylistPlayer.Auth.Model;
 using PlaylistPlayer.Data;
 using PlaylistPlayer.Data.Entities;
 using PlaylistPlayer.Helpers;
@@ -93,6 +99,7 @@ namespace PlaylistPlayer
             categoriesGroup
                 .MapPost(
                     "/categories",
+                    [Authorize(Roles = MusicRoles.MusicUser)]
                     async (
                         CreateCategoryDto dto,
                         LinkGenerator linkGenerator,
@@ -104,7 +111,8 @@ namespace PlaylistPlayer
                         {
                             Name = dto.Name,
                             Description = dto.Description,
-                            CreatedAt = DateTimeOffset.UtcNow
+                            CreatedAt = DateTimeOffset.UtcNow,
+                            UserId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub)
                         };
                         dbContext.Categories.Add(category);
 
@@ -127,12 +135,26 @@ namespace PlaylistPlayer
             categoriesGroup
                 .MapPut(
                     "/categories/{categoryId}",
-                    async (UpdateCategoryDto dto, int categoryId, MusicDbContext dbContext) =>
+                    [Authorize]
+                    async (
+                        UpdateCategoryDto dto,
+                        int categoryId,
+                        HttpContext httpContext,
+                        MusicDbContext dbContext
+                    ) =>
                     {
                         var category = await dbContext.Categories.FindAsync(categoryId);
                         if (category == null)
-                        {
                             return Results.NotFound();
+
+                        if (
+                            !httpContext.User.IsInRole(MusicRoles.Admin)
+                            && httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                                != category.UserId
+                        )
+                        {
+                            // NotFound()
+                            return Results.Forbid();
                         }
 
                         category.Description = dto.Description;
@@ -202,9 +224,11 @@ namespace PlaylistPlayer
             playlistsGroup
                 .MapPost(
                     "/",
+                    [Authorize(Roles = MusicRoles.MusicUser)]
                     async (
                         [FromRoute] int categoryId,
                         [FromBody] CreatePlaylistDto dto,
+                        HttpContext httpContext,
                         MusicDbContext dbContext
                     ) =>
                     {
@@ -217,7 +241,8 @@ namespace PlaylistPlayer
                             Name = dto.Name,
                             Description = dto.Description,
                             CategoryId = categoryId,
-                            CreatedAt = DateTimeOffset.UtcNow
+                            CreatedAt = DateTimeOffset.UtcNow,
+                            UserId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub)
                         };
                         dbContext.Playlists.Add(playlist);
                         await dbContext.SaveChangesAsync();
@@ -233,10 +258,12 @@ namespace PlaylistPlayer
             playlistsGroup
                 .MapPut(
                     "/{playlistId}",
+                    [Authorize]
                     async (
                         int categoryId,
                         int playlistId,
                         UpdatePlaylistDto dto,
+                        HttpContext httpContext,
                         MusicDbContext dbContext
                     ) =>
                     {
@@ -245,6 +272,16 @@ namespace PlaylistPlayer
                         );
                         if (playlist == null)
                             return Results.NotFound();
+
+                        if (
+                            !httpContext.User.IsInRole(MusicRoles.Admin)
+                            && httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                                != playlist.UserId
+                        )
+                        {
+                            // NotFound()
+                            return Results.Forbid();
+                        }
 
                         playlist.Name = dto.Name;
                         playlist.Description = dto.Description;
@@ -319,10 +356,12 @@ namespace PlaylistPlayer
             songsGroup
                 .MapPost(
                     "/",
+                    [Authorize(Roles = MusicRoles.MusicUser)]
                     async (
                         int categoryId,
                         int playlistId,
                         CreateSongDto dto,
+                        HttpContext httpContext,
                         MusicDbContext dbContext
                     ) =>
                     {
@@ -345,7 +384,8 @@ namespace PlaylistPlayer
                             Duration = dto.Duration,
                             PlaylistId = playlistId,
                             CreatedAt = DateTimeOffset.UtcNow,
-                            OrderId = newOrderId
+                            OrderId = newOrderId,
+                            UserId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub)
                         };
 
                         dbContext.Songs.Add(song);
@@ -362,11 +402,13 @@ namespace PlaylistPlayer
             songsGroup
                 .MapPut(
                     "/{songId}",
+                    [Authorize]
                     async (
                         int categoryId,
                         int playlistId,
                         int songId,
                         UpdateSongDto dto,
+                        HttpContext httpContext,
                         MusicDbContext dbContext
                     ) =>
                     {
@@ -379,6 +421,16 @@ namespace PlaylistPlayer
 
                         if (song == null)
                             return Results.NotFound();
+
+                        if (
+                            !httpContext.User.IsInRole(MusicRoles.Admin)
+                            && httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                                != song.UserId
+                        )
+                        {
+                            // NotFound()
+                            return Results.Forbid();
+                        }
 
                         // Update song properties
                         song.Title = dto.Title;

@@ -1,4 +1,7 @@
-﻿namespace PlaylistPlayer.Data.Entities;
+﻿using PlaylistPlayer.Auth.Model;
+using System.ComponentModel.DataAnnotations;
+
+namespace PlaylistPlayer.Data.Entities;
 
 public class Playlist
 {
@@ -10,6 +13,10 @@ public class Playlist
     public int CategoryId { get; set; }
     public Category Category { get; set; } = null!;
     public ICollection<Song> Songs { get; set; } = new List<Song>();
+
+    [Required]
+    public required string UserId { get; set; }
+    public MusicUser User { get; set; }
 
     public PlaylistDto ToDto()
     {
