@@ -15,7 +15,7 @@ The system will allow users to create, organize, and manage their music playlist
 - **Songs**: CRUD operations for adding and removing songs from playlists.
 - **Role-based access**:
   - **Guest**: Can view public categories, playlists, and songs.
-  - **Member**: Can create and manage their own playlists.
+  - **Member**: Can create and manage their playlists.
   - **Administrator**: Full access to manage categories, playlists, and users.
 - **Authentication**: JWT-based user authentication with token renewal strategy.
 - **Hierarchical Method**: A method that returns all playlists within a category or all songs within a playlist.
@@ -27,4 +27,4 @@ The system will allow users to create, organize, and manage their music playlist
 - **Database**: SQL Server.
 - **Authentication**: JWT with ASP.NET Core Identity.
 - **API Documentation**: OpenAPI.
-- **Cloud Hosting**: Azure App Services.
+- **Cloud Hosting**: DigitalOcean.
