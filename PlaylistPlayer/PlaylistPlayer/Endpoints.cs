@@ -90,7 +90,9 @@ namespace PlaylistPlayer
                     async (int categoryId, MusicDbContext dbContext) =>
                     {
                         var category = await dbContext.Categories.FindAsync(categoryId);
-                        return category == null ? Results.NotFound() : Results.Ok(category.ToDto());
+                        return category == null
+                            ? Results.NotFound("Category not found")
+                            : Results.Ok(category.ToDto());
                     }
                 )
                 .WithName("GetCategory")
@@ -197,11 +199,18 @@ namespace PlaylistPlayer
                     "/",
                     async ([FromRoute] int categoryId, MusicDbContext dbContext) =>
                     {
+                        var category = await dbContext.Categories.FindAsync(categoryId);
+                        if (category == null)
+                            return Results.NotFound("Category not found");
+
                         var playlists = await dbContext.Playlists
                             .Where(p => p.CategoryId == categoryId)
                             .Select(p => p.ToDto())
                             .ToListAsync();
-                        return TypedResults.Ok(playlists);
+
+                        return playlists.Count == 0
+                            ? Results.NotFound("No playlists found for this category")
+                            : TypedResults.Ok(playlists);
                     }
                 )
                 .WithName("GetPlaylists");
@@ -211,11 +220,15 @@ namespace PlaylistPlayer
                     "/{playlistId}",
                     async (int categoryId, int playlistId, MusicDbContext dbContext) =>
                     {
+                        var category = await dbContext.Categories.FindAsync(categoryId);
+                        if (category == null)
+                            return Results.NotFound("Category not found");
+
                         var playlist = await dbContext.Playlists.FirstOrDefaultAsync(
                             p => p.CategoryId == categoryId && p.Id == playlistId
                         );
                         return playlist == null
-                            ? Results.NotFound()
+                            ? Results.NotFound("Playlist not found")
                             : TypedResults.Ok(playlist.ToDto());
                     }
                 )
@@ -247,9 +260,10 @@ namespace PlaylistPlayer
                         dbContext.Playlists.Add(playlist);
                         await dbContext.SaveChangesAsync();
 
+                        var playlistDto = playlist.ToDto();
                         return TypedResults.Created(
                             $"/api/categories/{categoryId}/playlists/{playlist.Id}",
-                            playlist.ToDto()
+                            playlistDto
                         );
                     }
                 )
@@ -267,11 +281,15 @@ namespace PlaylistPlayer
                         MusicDbContext dbContext
                     ) =>
                     {
+                        var category = await dbContext.Categories.FindAsync(categoryId);
+                        if (category == null)
+                            return Results.NotFound("Category not found");
+
                         var playlist = await dbContext.Playlists.FirstOrDefaultAsync(
                             p => p.CategoryId == categoryId && p.Id == playlistId
                         );
                         if (playlist == null)
-                            return Results.NotFound();
+                            return Results.NotFound("Playlist not found");
 
                         if (
                             !httpContext.User.IsInRole(MusicRoles.Admin)
@@ -279,7 +297,6 @@ namespace PlaylistPlayer
                                 != playlist.UserId
                         )
                         {
-                            // NotFound()
                             return Results.Forbid();
                         }
 
@@ -297,11 +314,15 @@ namespace PlaylistPlayer
                     "/{playlistId}",
                     async (int categoryId, int playlistId, MusicDbContext dbContext) =>
                     {
+                        var category = await dbContext.Categories.FindAsync(categoryId);
+                        if (category == null)
+                            return Results.NotFound("Category not found");
+
                         var playlist = await dbContext.Playlists.FirstOrDefaultAsync(
                             p => p.CategoryId == categoryId && p.Id == playlistId
                         );
                         if (playlist == null)
-                            return Results.NotFound();
+                            return Results.NotFound("Playlist not found");
 
                         dbContext.Playlists.Remove(playlist);
                         await dbContext.SaveChangesAsync();
@@ -324,15 +345,24 @@ namespace PlaylistPlayer
                     "/",
                     async (int categoryId, int playlistId, MusicDbContext dbContext) =>
                     {
+                        var category = await dbContext.Categories.FindAsync(categoryId);
+                        if (category == null)
+                            return Results.NotFound("Category not found");
+
+                        var playlist = await dbContext.Playlists.FirstOrDefaultAsync(
+                            p => p.CategoryId == categoryId && p.Id == playlistId
+                        );
+                        if (playlist == null)
+                            return Results.NotFound("Playlist not found");
+
                         var songs = await dbContext.Songs
-                            .Where(
-                                s =>
-                                    s.Playlist.CategoryId == categoryId
-                                    && s.PlaylistId == playlistId
-                            )
+                            .Where(s => s.PlaylistId == playlistId)
                             .Select(s => s.ToDto())
                             .ToListAsync();
-                        return TypedResults.Ok(songs);
+
+                        return songs.Count == 0
+                            ? Results.NotFound("No songs found in this playlist")
+                            : TypedResults.Ok(songs);
                     }
                 )
                 .WithName("GetSongs");
@@ -342,13 +372,22 @@ namespace PlaylistPlayer
                     "/{songId}",
                     async (int categoryId, int playlistId, int songId, MusicDbContext dbContext) =>
                     {
-                        var song = await dbContext.Songs.FirstOrDefaultAsync(
-                            s =>
-                                s.Playlist.CategoryId == categoryId
-                                && s.PlaylistId == playlistId
-                                && s.Id == songId
+                        var category = await dbContext.Categories.FindAsync(categoryId);
+                        if (category == null)
+                            return Results.NotFound("Category not found");
+
+                        var playlist = await dbContext.Playlists.FirstOrDefaultAsync(
+                            p => p.CategoryId == categoryId && p.Id == playlistId
                         );
-                        return song == null ? Results.NotFound() : TypedResults.Ok(song.ToDto());
+                        if (playlist == null)
+                            return Results.NotFound("Playlist not found");
+
+                        var song = await dbContext.Songs.FirstOrDefaultAsync(
+                            s => s.PlaylistId == playlistId && s.Id == songId
+                        );
+                        return song == null
+                            ? Results.NotFound("Song not found")
+                            : TypedResults.Ok(song.ToDto());
                     }
                 )
                 .WithName("GetSong");
@@ -365,6 +404,10 @@ namespace PlaylistPlayer
                         MusicDbContext dbContext
                     ) =>
                     {
+                        var category = await dbContext.Categories.FindAsync(categoryId);
+                        if (category == null)
+                            return Results.NotFound("Category not found");
+
                         var playlist = await dbContext.Playlists
                             .Include(p => p.Songs)
                             .FirstOrDefaultAsync(
@@ -412,15 +455,21 @@ namespace PlaylistPlayer
                         MusicDbContext dbContext
                     ) =>
                     {
-                        var song = await dbContext.Songs.FirstOrDefaultAsync(
-                            s =>
-                                s.Playlist.CategoryId == categoryId
-                                && s.PlaylistId == playlistId
-                                && s.Id == songId
-                        );
+                        var category = await dbContext.Categories.FindAsync(categoryId);
+                        if (category == null)
+                            return Results.NotFound("Category not found");
 
+                        var playlist = await dbContext.Playlists.FirstOrDefaultAsync(
+                            p => p.CategoryId == categoryId && p.Id == playlistId
+                        );
+                        if (playlist == null)
+                            return Results.NotFound("Playlist not found");
+
+                        var song = await dbContext.Songs.FirstOrDefaultAsync(
+                            s => s.PlaylistId == playlistId && s.Id == songId
+                        );
                         if (song == null)
-                            return Results.NotFound();
+                            return Results.NotFound("Song not found");
 
                         if (
                             !httpContext.User.IsInRole(MusicRoles.Admin)
@@ -428,7 +477,6 @@ namespace PlaylistPlayer
                                 != song.UserId
                         )
                         {
-                            // NotFound()
                             return Results.Forbid();
                         }
 
@@ -460,7 +508,6 @@ namespace PlaylistPlayer
                         }
 
                         await dbContext.SaveChangesAsync();
-
                         return TypedResults.Ok(song.ToDto());
                     }
                 )
@@ -471,14 +518,21 @@ namespace PlaylistPlayer
                     "/{songId}",
                     async (int categoryId, int playlistId, int songId, MusicDbContext dbContext) =>
                     {
+                        var category = await dbContext.Categories.FindAsync(categoryId);
+                        if (category == null)
+                            return Results.NotFound("Category not found");
+
+                        var playlist = await dbContext.Playlists.FirstOrDefaultAsync(
+                            p => p.CategoryId == categoryId && p.Id == playlistId
+                        );
+                        if (playlist == null)
+                            return Results.NotFound("Playlist not found");
+
                         var song = await dbContext.Songs.FirstOrDefaultAsync(
-                            s =>
-                                s.Playlist.CategoryId == categoryId
-                                && s.PlaylistId == playlistId
-                                && s.Id == songId
+                            s => s.PlaylistId == playlistId && s.Id == songId
                         );
                         if (song == null)
-                            return Results.NotFound();
+                            return Results.NotFound("Song not found");
 
                         dbContext.Songs.Remove(song);
                         await dbContext.SaveChangesAsync();
