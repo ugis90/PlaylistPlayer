@@ -147,7 +147,7 @@ namespace PlaylistPlayer
                     {
                         var category = await dbContext.Categories.FindAsync(categoryId);
                         if (category == null)
-                            return Results.NotFound();
+                            return Results.NotFound("Category not found");
 
                         if (
                             !httpContext.User.IsInRole(MusicRoles.Admin)
