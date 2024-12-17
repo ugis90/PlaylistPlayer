@@ -471,11 +471,20 @@ namespace PlaylistPlayer
                         if (song == null)
                             return Results.NotFound("Song not found");
 
-                        if (
-                            !httpContext.User.IsInRole(MusicRoles.Admin)
-                            && httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-                                != song.UserId
-                        )
+                        var currentUserId = httpContext.User.FindFirstValue(
+                            JwtRegisteredClaimNames.Sub
+                        );
+                        var isAdmin = httpContext.User.IsInRole(MusicRoles.Admin);
+                        var isSongOwner = currentUserId == song.UserId;
+
+                        // More explicit authorization check
+                        if (!isAdmin && !isSongOwner)
+                        {
+                            return Results.Forbid();
+                        }
+
+                        // If trying to change order and not the song owner/admin
+                        if (song.OrderId != dto.OrderId && !isAdmin && !isSongOwner)
                         {
                             return Results.Forbid();
                         }
@@ -500,21 +509,10 @@ namespace PlaylistPlayer
                             int newIndex = Math.Min(dto.OrderId - 1, playlistSongs.Count);
                             playlistSongs.Insert(newIndex, song);
 
-                            // Only update the moved song's OrderId
-                            song.OrderId = dto.OrderId;
-
-                            // Adjust surrounding songs' OrderIds if necessary
-                            var songsToUpdate = playlistSongs
-                                .Where(s => s.Id != song.Id)
-                                .OrderBy(s => s.OrderId);
-
-                            int currentOrder = 1;
-                            foreach (var s in songsToUpdate)
+                            // Explicitly update OrderIds to match the new positions
+                            for (int i = 0; i < playlistSongs.Count; i++)
                             {
-                                if (currentOrder == song.OrderId)
-                                    currentOrder++;
-                                s.OrderId = currentOrder;
-                                currentOrder++;
+                                playlistSongs[i].OrderId = i + 1;
                             }
                         }
 
