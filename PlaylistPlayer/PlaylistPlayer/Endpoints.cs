@@ -502,9 +502,6 @@ namespace PlaylistPlayer
                                 .OrderBy(s => s.OrderId)
                                 .ToListAsync();
 
-                            // Calculate the direction of movement
-                            bool movingUp = dto.OrderId < song.OrderId;
-
                             // Remove the song from its current position
                             playlistSongs.Remove(song);
 
@@ -512,39 +509,10 @@ namespace PlaylistPlayer
                             int newIndex = Math.Min(dto.OrderId - 1, playlistSongs.Count);
                             playlistSongs.Insert(newIndex, song);
 
-                            // Adjust surrounding songs' OrderIds
+                            // Explicitly reset OrderIds to ensure uniqueness and sequential order
                             for (int i = 0; i < playlistSongs.Count; i++)
                             {
-                                // Skip the moved song
-                                if (playlistSongs[i].Id == song.Id)
-                                {
-                                    playlistSongs[i].OrderId = dto.OrderId;
-                                    continue;
-                                }
-
-                                // Adjust other songs' order
-                                if (movingUp)
-                                {
-                                    // Moving up: increment orders after the new position
-                                    if (
-                                        playlistSongs[i].OrderId >= dto.OrderId
-                                        && playlistSongs[i].OrderId < song.OrderId
-                                    )
-                                    {
-                                        playlistSongs[i].OrderId++;
-                                    }
-                                }
-                                else
-                                {
-                                    // Moving down: decrement orders before the new position
-                                    if (
-                                        playlistSongs[i].OrderId <= dto.OrderId
-                                        && playlistSongs[i].OrderId > song.OrderId
-                                    )
-                                    {
-                                        playlistSongs[i].OrderId--;
-                                    }
-                                }
+                                playlistSongs[i].OrderId = i + 1;
                             }
                         }
 
