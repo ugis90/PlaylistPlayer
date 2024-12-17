@@ -500,10 +500,21 @@ namespace PlaylistPlayer
                             int newIndex = Math.Min(dto.OrderId - 1, playlistSongs.Count);
                             playlistSongs.Insert(newIndex, song);
 
-                            // Update OrderId for all songs in the playlist
-                            for (int i = 0; i < playlistSongs.Count; i++)
+                            // Only update the moved song's OrderId
+                            song.OrderId = dto.OrderId;
+
+                            // Adjust surrounding songs' OrderIds if necessary
+                            var songsToUpdate = playlistSongs
+                                .Where(s => s.Id != song.Id)
+                                .OrderBy(s => s.OrderId);
+
+                            int currentOrder = 1;
+                            foreach (var s in songsToUpdate)
                             {
-                                playlistSongs[i].OrderId = i + 1;
+                                if (currentOrder == song.OrderId)
+                                    currentOrder++;
+                                s.OrderId = currentOrder;
+                                currentOrder++;
                             }
                         }
 

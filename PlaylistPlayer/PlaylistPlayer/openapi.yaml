@@ -5,7 +5,7 @@ info:
   version: 1.0.0
 
 servers:
-  - url: https://api.example.com/v1
+  - url: https://octopus-app-3t93j.ondigitalocean.app/api
 
 paths:
   /categories:
@@ -60,8 +60,8 @@ paths:
           headers:
             Pagination:
               $ref: "#/components/headers/Pagination"
-              example: 'Total-Count: 25, Page-Count: 3, Page-Size: 10, Page-Number: 1'
-    
+              example: "Total-Count: 25, Page-Count: 3, Page-Size: 10, Page-Number: 1"
+
     post:
       description: "Create a category"
       tags:
@@ -126,7 +126,7 @@ paths:
                     method: "GET"
         "404":
           $ref: "#/components/responses/notFound"
-    
+
     put:
       summary: Update a category by ID
       tags:
@@ -163,7 +163,7 @@ paths:
           $ref: "#/components/responses/notFound"
         "422":
           $ref: "#/components/responses/unprocessableEntity"
-    
+
     delete:
       summary: Delete a category by ID
       tags:
@@ -215,7 +215,7 @@ paths:
           headers:
             Pagination:
               $ref: "#/components/headers/Pagination"
-    
+
     post:
       description: "Add a playlist"
       tags:
@@ -283,7 +283,7 @@ paths:
                     method: "GET"
         "404":
           $ref: "#/components/responses/notFound"
-    
+
     put:
       summary: Update a playlist for a category
       tags:
@@ -322,7 +322,7 @@ paths:
           $ref: "#/components/responses/notFound"
         "422":
           $ref: "#/components/responses/unprocessableEntity"
-    
+
     delete:
       summary: Delete a playlist for a category
       tags:
@@ -386,7 +386,7 @@ paths:
           headers:
             Pagination:
               $ref: "#/components/headers/Pagination"
-    
+
     post:
       description: "Add a song to a specific playlist"
       tags:
@@ -454,7 +454,7 @@ paths:
                     method: "GET"
         "404":
           $ref: "#/components/responses/notFound"
-    
+
     put:
       summary: Update a song
       tags:
@@ -494,7 +494,7 @@ paths:
           $ref: "#/components/responses/notFound"
         "422":
           $ref: "#/components/responses/unprocessableEntity"
-    
+
     delete:
       summary: Delete a song
       tags:
@@ -855,7 +855,8 @@ components:
             items:
               type: string
           example:
-            name: ["Name is required", "Name must be between 2 and 100 characters"]
+            name:
+              ["Name is required", "Name must be between 2 and 100 characters"]
             description: ["Description must be between 5 and 500 characters"]
 
     registerUserDto:
@@ -935,7 +936,11 @@ components:
             detail: "The request contains invalid parameters"
             instance: "/categories/1/playlists"
             errors:
-              name: ["Name is required", "Name must be between 2 and 100 characters"]
+              name:
+                [
+                  "Name is required",
+                  "Name must be between 2 and 100 characters",
+                ]
               description: ["Description must be between 5 and 500 characters"]
 
     unprocessableEntity:
@@ -951,7 +956,8 @@ components:
             detail: "The operation cannot be completed due to business rule violations"
             instance: "/categories/1/playlists/1/songs"
             errors:
-              playlist: ["Maximum number of songs (100) reached for this playlist"]
+              playlist:
+                ["Maximum number of songs (100) reached for this playlist"]
 
     notFound:
       description: Resource not found
@@ -1025,7 +1031,7 @@ components:
       description: Pagination metadata
       schema:
         type: string
-      example: 'Total-Count: 25, Page-Count: 3, Page-Size: 10, Page-Number: 1'
+      example: "Total-Count: 25, Page-Count: 3, Page-Size: 10, Page-Number: 1"
 
   securitySchemes:
     bearerAuth:
