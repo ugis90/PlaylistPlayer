@@ -12,7 +12,7 @@
           <div>
             <h4 className="text-lg font-bold mb-4">Quick Links</h4>
             <nav className="space-y-2">
-              <a href="#" className="block text-gray-400 hover:text-white">
+              <a href="/" className="block text-gray-400 hover:text-white">
                 Home
               </a>
               <a href="#" className="block text-gray-400 hover:text-white">
