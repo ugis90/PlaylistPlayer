@@ -23,6 +23,7 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         policy.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod();
+        policy.WithOrigins("https://chic-jalebi-b61d0b.netlify.app").AllowAnyHeader().AllowAnyMethod();
     });
 });
 
