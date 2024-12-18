@@ -22,8 +22,17 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod();
-        policy.WithOrigins("https://chic-jalebi-b61d0b.netlify.app").AllowAnyHeader().AllowAnyMethod();
+        policy
+            .WithOrigins(
+                "http://localhost:3000",
+                "https://localhost:3000",
+                "https://chic-jalebi-b61d0b.netlify.app"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .WithExposedHeaders("Content-Disposition")  // If you need to expose any headers
+            .SetIsOriginAllowed(origin => true)  // For development only
+            .AllowCredentials();  // If you're using credentials/cookies
     });
 });
 
