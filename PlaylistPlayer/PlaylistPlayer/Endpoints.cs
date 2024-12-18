@@ -172,12 +172,25 @@ namespace PlaylistPlayer
             categoriesGroup
                 .MapDelete(
                     "/categories/{categoryId}",
-                    async (int categoryId, MusicDbContext dbContext) =>
+                    [Authorize] // Require authentication
+                    async (int categoryId, HttpContext httpContext, MusicDbContext dbContext) =>
                     {
                         var category = await dbContext.Categories.FindAsync(categoryId);
                         if (category == null)
                         {
                             return Results.NotFound();
+                        }
+
+                        // Check if user is admin or the owner
+                        var currentUserId = httpContext.User.FindFirstValue(
+                            JwtRegisteredClaimNames.Sub
+                        );
+                        var isAdmin = httpContext.User.IsInRole(MusicRoles.Admin);
+                        var isOwner = category.UserId == currentUserId;
+
+                        if (!isAdmin && !isOwner)
+                        {
+                            return Results.Forbid();
                         }
 
                         dbContext.Categories.Remove(category);
@@ -312,7 +325,13 @@ namespace PlaylistPlayer
             playlistsGroup
                 .MapDelete(
                     "/{playlistId}",
-                    async (int categoryId, int playlistId, MusicDbContext dbContext) =>
+                    [Authorize] // Require user to be authenticated
+                    async (
+                        int categoryId,
+                        int playlistId,
+                        HttpContext httpContext,
+                        MusicDbContext dbContext
+                    ) =>
                     {
                         var category = await dbContext.Categories.FindAsync(categoryId);
                         if (category == null)
@@ -323,6 +342,18 @@ namespace PlaylistPlayer
                         );
                         if (playlist == null)
                             return Results.NotFound("Playlist not found");
+
+                        // Check authorization
+                        var currentUserId = httpContext.User.FindFirstValue(
+                            JwtRegisteredClaimNames.Sub
+                        );
+                        var isAdmin = httpContext.User.IsInRole(MusicRoles.Admin);
+                        var isOwner = playlist.UserId == currentUserId;
+
+                        if (!isAdmin && !isOwner)
+                        {
+                            return Results.Forbid(); // Not admin or owner, deny access
+                        }
 
                         dbContext.Playlists.Remove(playlist);
                         await dbContext.SaveChangesAsync();
@@ -525,7 +556,14 @@ namespace PlaylistPlayer
             songsGroup
                 .MapDelete(
                     "/{songId}",
-                    async (int categoryId, int playlistId, int songId, MusicDbContext dbContext) =>
+                    [Authorize] // Require user to be authenticated
+                    async (
+                        int categoryId,
+                        int playlistId,
+                        int songId,
+                        HttpContext httpContext,
+                        MusicDbContext dbContext
+                    ) =>
                     {
                         var category = await dbContext.Categories.FindAsync(categoryId);
                         if (category == null)
@@ -542,6 +580,18 @@ namespace PlaylistPlayer
                         );
                         if (song == null)
                             return Results.NotFound("Song not found");
+
+                        // Check authorization
+                        var currentUserId = httpContext.User.FindFirstValue(
+                            JwtRegisteredClaimNames.Sub
+                        );
+                        var isAdmin = httpContext.User.IsInRole(MusicRoles.Admin);
+                        var isOwner = song.UserId == currentUserId;
+
+                        if (!isAdmin && !isOwner)
+                        {
+                            return Results.Forbid(); // Not admin or owner, deny access
+                        }
 
                         dbContext.Songs.Remove(song);
                         await dbContext.SaveChangesAsync();
