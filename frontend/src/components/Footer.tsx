@@ -16,9 +16,6 @@
                 Home
               </a>
               <a href="#" className="block text-gray-400 hover:text-white">
-                Categories
-              </a>
-              <a href="#" className="block text-gray-400 hover:text-white">
                 About
               </a>
             </nav>

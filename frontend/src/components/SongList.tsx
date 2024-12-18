@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { apiClient } from "../api/client";
 import { AddSong } from "./AddSong";
 import {
@@ -11,8 +12,9 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { toast } from "sonner";
-import { Breadcrumb } from "./Breadcrumb.tsx";
+import { Breadcrumb } from "./Breadcrumb";
 import React, { useState } from "react";
+import { Pencil, Trash } from "lucide-react"; // Optional icons for edit/delete
 
 interface Song {
   id: number;
@@ -42,7 +44,6 @@ export function SongList() {
         const songs = Array.isArray(response.data)
           ? response.data
           : response.data?.resources?.map((item: any) => item.resource) || [];
-        console.log("Processed songs:", songs);
         return songs;
       } catch (err: any) {
         if (err.response?.status === 404) {
@@ -105,60 +106,29 @@ export function SongList() {
 
   const onDragEnd = React.useCallback(
     (result: DropResult) => {
-      console.log("Full drag result:", JSON.stringify(result, null, 2));
+      if (!result.destination) return;
 
-      // If no destination, do nothing
-      if (!result.destination) {
-        console.error("No destination for drag");
-        return;
-      }
+      if (result.source.index === result.destination.index) return;
 
-      // Prevent unnecessary updates
-      if (result.source.index === result.destination.index) {
-        console.log("No actual position change");
-        return;
-      }
-
-      // Extract songId
       const songId = parseInt(result.draggableId.replace("song-", ""));
 
-      // Create a deep copy of current songs sorted by orderId
       const sortedSongs = [...data]
         .sort((a, b) => a.orderId - b.orderId)
         .map((song) => ({ ...song }));
 
-      // Find the dragged song
       const draggedSong = sortedSongs.find((s) => s.id === songId);
-      if (!draggedSong) {
-        console.error("Dragged song not found");
-        return;
-      }
+      if (!draggedSong) return;
 
-      // Remove the dragged song from its current position
       const filteredSongs = sortedSongs.filter((s) => s.id !== songId);
-
-      // Insert the song at the new position
       filteredSongs.splice(result.destination.index, 0, draggedSong);
 
-      // Explicitly reset OrderIds to ensure uniqueness and sequential order
       const updatedSongs = filteredSongs.map((song, index) => ({
         ...song,
         orderId: index + 1,
       }));
 
-      console.log(
-        "Updated Songs Order:",
-        updatedSongs.map((s) => ({
-          id: s.id,
-          title: s.title,
-          orderId: s.orderId,
-        })),
-      );
-
-      // Immediately update local data
       queryClient.setQueryData(["songs", categoryId, playlistId], updatedSongs);
 
-      // Mutate with new order
       updateMutation.mutate(
         {
           id: songId,
@@ -172,14 +142,10 @@ export function SongList() {
         {
           onError: (error) => {
             console.error("Mutation Error:", error);
-
-            // Revert to original data on error
             queryClient.setQueryData(["songs", categoryId, playlistId], data);
-
             toast.error("Failed to update song order");
           },
           onSettled: () => {
-            // Force refetch to ensure consistent state
             queryClient.invalidateQueries({
               queryKey: ["songs", categoryId, playlistId],
             });
@@ -190,8 +156,14 @@ export function SongList() {
     [data, updateMutation, categoryId, playlistId, queryClient],
   );
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
+  if (isLoading) return <div className="text-center">Loading...</div>;
+  if (error)
+    return (
+      <div className="text-center text-red-500">
+        Error: {(error as Error).message}
+      </div>
+    );
+
   if (!data?.length)
     return (
       <div className="p-4">
@@ -208,12 +180,12 @@ export function SongList() {
     );
 
   return (
-    <div className="p-4">
+    <div className="p-4 space-y-4">
       <Breadcrumb />
       <Button variant="outline" onClick={() => navigate(-1)} className="mb-4">
         ← Back to Playlist
       </Button>
-      <h1 className="text-2xl font-bold mb-4">Songs</h1>
+      <h1 className="text-2xl font-bold">Songs</h1>
       <AddSong categoryId={categoryId!} playlistId={playlistId!} />
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="songs-list">
@@ -224,8 +196,8 @@ export function SongList() {
               className="space-y-4"
             >
               {data
-                .slice() // Create a copy
-                .sort((a, b) => a.orderId - b.orderId) // Sort by orderId
+                .slice()
+                .sort((a, b) => a.orderId - b.orderId)
                 .map((song, index) => (
                   <Draggable
                     key={`song-${song.id}`}
@@ -236,14 +208,12 @@ export function SongList() {
                       <div
                         ref={provided.innerRef}
                         {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className="mb-4"
+                        className="transition-transform hover:scale-[1.01]"
                       >
-                        <Card>
-                          <CardContent className="flex items-center justify-between p-4">
+                        <Card className="bg-white dark:bg-gray-800 text-black dark:text-gray-100">
+                          <CardContent className="p-4">
                             {editingId === song.id ? (
                               <form
-                                className="w-full"
                                 onSubmit={(e) => {
                                   e.preventDefault();
                                   const formData = new FormData(
@@ -261,15 +231,49 @@ export function SongList() {
                                     },
                                   });
                                 }}
+                                className="w-full space-y-4"
                               >
-                                {/* Existing form content remains the same */}
+                                <Input
+                                  name="title"
+                                  label="Song Title"
+                                  defaultValue={song.title}
+                                  placeholder="Song Title"
+                                  required
+                                />
+                                <Input
+                                  name="artist"
+                                  label="Artist"
+                                  defaultValue={song.artist}
+                                  placeholder="Artist"
+                                  required
+                                />
+                                <Input
+                                  name="duration"
+                                  label="Duration (seconds)"
+                                  type="number"
+                                  defaultValue={song.duration}
+                                  placeholder="Duration in seconds"
+                                  required
+                                />
+                                <div className="flex gap-2">
+                                  <Button type="submit">Save</Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setEditingId(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
                               </form>
                             ) : (
                               <div className="flex items-center gap-4 w-full">
                                 <div
                                   {...provided.dragHandleProps}
                                   className="flex flex-col gap-1 cursor-move"
+                                  aria-label="Reorder song"
                                 >
+                                  {/* Draggable handle indicator */}
                                   <div className="flex gap-1">
                                     <div className="w-1 h-1 rounded-full bg-gray-400"></div>
                                     <div className="w-1 h-1 rounded-full bg-gray-400"></div>
@@ -301,6 +305,7 @@ export function SongList() {
                                     size="sm"
                                     onClick={() => setEditingId(song.id)}
                                   >
+                                    <Pencil className="h-4 w-4 mr-1" />
                                     Edit
                                   </Button>
                                   <Button
@@ -317,9 +322,14 @@ export function SongList() {
                                       }
                                     }}
                                   >
-                                    {deleteMutation.isPending
-                                      ? "Deleting..."
-                                      : "Delete"}
+                                    {deleteMutation.isPending ? (
+                                      "Deleting..."
+                                    ) : (
+                                      <>
+                                        <Trash className="h-4 w-4 mr-1" />
+                                        Delete
+                                      </>
+                                    )}
                                   </Button>
                                 </div>
                               </div>

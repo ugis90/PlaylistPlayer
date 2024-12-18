@@ -5,8 +5,9 @@ import { Button } from "./ui/button";
 import { apiClient } from "../api/client";
 import { CreatePlaylist } from "./CreatePlaylist";
 import { useState } from "react";
-import { Breadcrumb } from "./Breadcrumb.tsx";
+import { Breadcrumb } from "./Breadcrumb";
 import { toast } from "sonner";
+import { Pencil, Trash, Eye } from "lucide-react";
 
 interface Playlist {
   id: number;
@@ -46,7 +47,6 @@ export function PlaylistList() {
       toast.success("Playlist updated successfully");
     },
     onError: (error: any) => {
-      console.log("Validation Error:", error);
       if (error.errors) {
         const firstError =
           error.errors.Name?.[0] || error.errors.Description?.[0];
@@ -69,21 +69,24 @@ export function PlaylistList() {
     },
   });
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <div className="text-center">Loading...</div>;
 
   return (
-    <div>
+    <div className="space-y-4">
       <Breadcrumb />
-      <Button variant="outline" onClick={() => navigate(-1)} className="mb-4">
+      <Button variant="outline" onClick={() => navigate(-1)}>
         ← Back to Categories
       </Button>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Playlists</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Playlists</h1>
         <CreatePlaylist categoryId={categoryId!} />
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {data?.map((playlist: Playlist) => (
-          <Card key={playlist.id}>
+          <Card
+            key={playlist.id}
+            className="bg-white dark:bg-gray-800 text-black dark:text-gray-100 p-4 transition-transform hover:scale-105 hover:shadow-lg"
+          >
             <CardHeader>
               {editingId === playlist.id ? (
                 <form
@@ -98,42 +101,34 @@ export function PlaylistList() {
                       },
                     });
                   }}
+                  className="space-y-2"
                 >
-                  <div>
-                    <input
-                      name="name"
-                      defaultValue={playlist.name}
-                      className={`border p-2 rounded w-full mb-2 ${
-                        updateMutation.error?.errors?.Name
-                          ? "border-red-500"
-                          : ""
-                      }`}
-                    />
-                    {updateMutation.error?.errors?.Name && (
-                      <p className="text-red-500 text-sm mb-2">
-                        {updateMutation.error.errors.Name[0]}
-                      </p>
-                    )}
-                  </div>
+                  <input
+                    name="name"
+                    defaultValue={playlist.name}
+                    className="border p-2 rounded w-full bg-gray-100 dark:bg-gray-700"
+                    placeholder="Playlist Name"
+                    required
+                  />
+                  {updateMutation.error?.errors?.Name && (
+                    <p className="text-red-500 text-sm">
+                      {updateMutation.error.errors.Name[0]}
+                    </p>
+                  )}
 
-                  <div>
-                    <textarea
-                      name="description"
-                      defaultValue={playlist.description}
-                      className={`border p-2 rounded w-full ${
-                        updateMutation.error?.errors?.Description
-                          ? "border-red-500"
-                          : ""
-                      }`}
-                    />
-                    {updateMutation.error?.errors?.Description && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {updateMutation.error.errors.Description[0]}
-                      </p>
-                    )}
-                  </div>
+                  <textarea
+                    name="description"
+                    defaultValue={playlist.description}
+                    className="border p-2 rounded w-full bg-gray-100 dark:bg-gray-700"
+                    placeholder="Description"
+                  />
+                  {updateMutation.error?.errors?.Description && (
+                    <p className="text-red-500 text-sm">
+                      {updateMutation.error.errors.Description[0]}
+                    </p>
+                  )}
 
-                  <div className="mt-2 space-x-2">
+                  <div className="flex gap-2 mt-2">
                     <Button type="submit" disabled={updateMutation.isPending}>
                       {updateMutation.isPending ? "Saving..." : "Save"}
                     </Button>
@@ -149,14 +144,18 @@ export function PlaylistList() {
                 </form>
               ) : (
                 <>
-                  <CardTitle>{playlist.name}</CardTitle>
-                  <p>{playlist.description}</p>
-                  <div className="flex gap-2 mt-4">
+                  <CardTitle className="text-xl font-semibold mb-2">
+                    {playlist.name}
+                  </CardTitle>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                    {playlist.description}
+                  </p>
+                  <div className="flex gap-2">
                     <Button
                       variant="outline"
                       onClick={() => setEditingId(playlist.id)}
                     >
-                      Edit
+                      <Pencil className="h-4 w-4 mr-1" /> Edit
                     </Button>
                     <Button
                       variant="outline"
@@ -167,7 +166,13 @@ export function PlaylistList() {
                         }
                       }}
                     >
-                      {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                      {deleteMutation.isPending ? (
+                        "Deleting..."
+                      ) : (
+                        <>
+                          <Trash className="h-4 w-4 mr-1" /> Delete
+                        </>
+                      )}
                     </Button>
                     <Button
                       variant="secondary"
@@ -177,7 +182,7 @@ export function PlaylistList() {
                         )
                       }
                     >
-                      View Songs
+                      <Eye className="h-4 w-4 mr-1" /> View Songs
                     </Button>
                   </div>
                 </>

@@ -23,16 +23,14 @@ export function Modal({
         <Dialog.Overlay
           className={cn(
             "fixed inset-0 bg-black/50",
-            "data-[state=open]:animate-in data-[state=open]:fade-in-0",
-            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+            "data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out",
           )}
         />
         <Dialog.Content
           className={cn(
             "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-            "bg-white rounded-lg p-6 shadow-xl w-full max-w-md",
-            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+            "bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg p-6 shadow-xl w-full max-w-md",
+            "data-[state=open]:animate-fade-in data-[state=open]:zoom-in data-[state=closed]:animate-fade-out data-[state=closed]:zoom-out",
             className,
           )}
         >
@@ -42,7 +40,7 @@ export function Modal({
           {children}
           <Dialog.Close asChild>
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               aria-label="Close"
             >
               <X className="h-4 w-4" />

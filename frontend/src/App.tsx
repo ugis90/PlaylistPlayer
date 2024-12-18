@@ -6,16 +6,9 @@ import { SongList } from "./components/SongList";
 import { LoginForm } from "./components/LoginForm";
 import { RegisterForm } from "./components/RegisterForm";
 import { AuthProvider } from "./auth/AuthContext";
-import { Navbar } from "./components/Navbar";
 import { PrivateRoute } from "./components/PrivateRoute";
-import { ToastProvider } from "./components/Toast.tsx";
-
-const Layout = ({ children }: { children: React.ReactNode }) => (
-  <div>
-    <Navbar />
-    <main className="container mx-auto p-4">{children}</main>
-  </div>
-);
+import { ToastProvider } from "./components/Toast";
+import { Layout } from "./components/Layout";
 
 const router = createBrowserRouter([
   {
@@ -66,7 +59,6 @@ const router = createBrowserRouter([
 
 export default function App() {
   const queryClient = new QueryClient();
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>

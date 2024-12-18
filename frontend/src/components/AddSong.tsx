@@ -2,8 +2,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../api/client";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { toast } from "sonner";
-import { ValidationError } from "../types/validation.ts";
+import { ValidationError } from "../types/validation";
 
 export function AddSong({
   categoryId,
@@ -40,10 +41,9 @@ export function AddSong({
       toast.success("Song added successfully");
     },
     onError: (error: any) => {
-      console.log("Validation Error:", error);
       if (error.errors) {
         setErrors({
-          type: "https://tools.ietf.org/html/rfc4918#section-11.2",
+          type: "validation",
           title: "Validation Error",
           status: 422,
           errors: {
@@ -52,7 +52,6 @@ export function AddSong({
             duration: error.errors.Duration || [],
           },
         });
-        // Show first validation error as toast
         const firstError =
           error.errors.Title?.[0] ||
           error.errors.Artist?.[0] ||
@@ -70,62 +69,41 @@ export function AddSong({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        mutation.mutate({
-          title,
-          artist,
-          duration: parseInt(duration),
-        });
+        mutation.mutate({ title, artist, duration: parseInt(duration) });
       }}
-      className="space-y-4 mb-6"
+      className="space-y-4 mb-6 bg-white dark:bg-gray-800 dark:text-gray-100 p-4 rounded shadow transition-shadow hover:shadow-lg max-w-md"
     >
-      <div>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Song title"
-          className={`border p-2 rounded w-full ${
-            errors?.errors?.title ? "border-red-500" : ""
-          }`}
-        />
-        {errors?.errors?.title && (
-          <p className="text-red-500 text-sm mt-1">{errors.errors.title[0]}</p>
-        )}
-      </div>
+      <Input
+        label="Song Title"
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Song title"
+        error={errors?.errors?.title ? errors.errors.title[0] : undefined}
+        required
+      />
 
-      <div>
-        <input
-          type="text"
-          value={artist}
-          onChange={(e) => setArtist(e.target.value)}
-          placeholder="Artist"
-          className={`border p-2 rounded w-full ${
-            errors?.errors?.artist ? "border-red-500" : ""
-          }`}
-        />
-        {errors?.errors?.artist && (
-          <p className="text-red-500 text-sm mt-1">{errors.errors.artist[0]}</p>
-        )}
-      </div>
+      <Input
+        label="Artist"
+        type="text"
+        value={artist}
+        onChange={(e) => setArtist(e.target.value)}
+        placeholder="Artist name"
+        error={errors?.errors?.artist ? errors.errors.artist[0] : undefined}
+        required
+      />
 
-      <div>
-        <input
-          type="number"
-          value={duration}
-          onChange={(e) => setDuration(e.target.value)}
-          placeholder="Duration (seconds)"
-          className={`border p-2 rounded w-full ${
-            errors?.errors?.duration ? "border-red-500" : ""
-          }`}
-        />
-        {errors?.errors?.duration && (
-          <p className="text-red-500 text-sm mt-1">
-            {errors.errors.duration[0]}
-          </p>
-        )}
-      </div>
+      <Input
+        label="Duration (seconds)"
+        type="number"
+        value={duration}
+        onChange={(e) => setDuration(e.target.value)}
+        placeholder="Enter duration in seconds"
+        error={errors?.errors?.duration ? errors.errors.duration[0] : undefined}
+        required
+      />
 
-      <Button type="submit" disabled={mutation.isPending}>
+      <Button type="submit" disabled={mutation.isPending} className="w-full">
         {mutation.isPending ? "Adding..." : "Add Song"}
       </Button>
     </form>
