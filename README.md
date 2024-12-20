@@ -45,3 +45,7 @@ npm run dev
 ```
 
 Open `http://localhost:3000` in your browser.
+
+Web page: https://chic-jalebi-b61d0b.netlify.app/
+
+Back-end: https://octopus-app-3t93j.ondigitalocean.app/api
