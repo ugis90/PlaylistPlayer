@@ -1,0 +1,1821 @@
+openapi: 3.0.0
+info:
+  title: Family Fleet Management API
+  description: An API for managing family vehicles, trips, and maintenance records
+  version: 1.0.0
+
+servers:
+  - url: https://octopus-app-3t93j.ondigitalocean.app/api
+
+paths:
+  /vehicles:
+    get:
+      summary: Get a list of vehicles
+      tags:
+        - vehicle
+      operationId: getAllVehicles
+      parameters:
+        - $ref: "#/components/parameters/pageNumber"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: A list of vehicles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/pagedResourceResponse"
+              example:
+                resources:
+                  - resource:
+                      id: 1
+                      make: "Toyota"
+                      model: "Camry"
+                      year: 2020
+                      licensePlate: "ABC123"
+                      description: "Family sedan"
+                      createdOn: "2024-03-15T14:30:00Z"
+                    links:
+                      - href: "/vehicles/1"
+                        rel: "self"
+                        method: "GET"
+                      - href: "/vehicles/1/trips"
+                        rel: "trips"
+                        method: "GET"
+                  - resource:
+                      id: 2
+                      make: "Honda"
+                      model: "CR-V"
+                      year: 2022
+                      licensePlate: "XYZ789"
+                      description: "Family SUV"
+                      createdOn: "2024-03-15T14:35:00Z"
+                    links:
+                      - href: "/vehicles/2"
+                        rel: "self"
+                        method: "GET"
+                      - href: "/vehicles/2/trips"
+                        rel: "trips"
+                        method: "GET"
+                links:
+                  - href: "/vehicles?pageNumber=2&pageSize=10"
+                    rel: "next"
+                    method: "GET"
+                  - href: "/vehicles?pageNumber=1&pageSize=10"
+                    rel: "self"
+                    method: "GET"
+          headers:
+            Pagination:
+              $ref: "#/components/headers/Pagination"
+              example: "Total-Count: 25, Page-Count: 3, Page-Size: 10, Page-Number: 1"
+
+    post:
+      description: "Create a vehicle"
+      tags:
+        - vehicle
+      operationId: createVehicle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/createVehicle"
+            example:
+              make: "Ford"
+              model: "Explorer"
+              year: 2021
+              licensePlate: "DEF456"
+              description: "Family SUV for road trips"
+      responses:
+        "201":
+          $ref: "#/components/responses/singleVehicle"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 3
+                  make: "Ford"
+                  model: "Explorer"
+                  year: 2021
+                  licensePlate: "DEF456"
+                  description: "Family SUV for road trips"
+                  createdOn: "2024-03-15T15:00:00Z"
+                links:
+                  - href: "/vehicles/3"
+                    rel: "self"
+                    method: "GET"
+                  - href: "/vehicles/3/trips"
+                    rel: "trips"
+                    method: "GET"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+
+  /vehicles/{vehicleId}:
+    parameters:
+      - $ref: "#/components/parameters/vehicleId"
+    get:
+      summary: Get a vehicle by ID
+      tags:
+        - vehicle
+      operationId: getVehicle
+      responses:
+        "200":
+          $ref: "#/components/responses/singleVehicle"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 1
+                  make: "Toyota"
+                  model: "Camry"
+                  year: 2020
+                  licensePlate: "ABC123"
+                  description: "Family sedan"
+                  createdOn: "2024-03-15T14:30:00Z"
+                links:
+                  - href: "/vehicles/1"
+                    rel: "self"
+                    method: "GET"
+                  - href: "/vehicles/1/trips"
+                    rel: "trips"
+                    method: "GET"
+        "404":
+          $ref: "#/components/responses/notFound"
+
+    put:
+      summary: Update a vehicle by ID
+      tags:
+        - vehicle
+      operationId: updateVehicle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/updateVehicle"
+            example:
+              description: "Updated family sedan with new features"
+              currentMileage: 15000
+      responses:
+        "200":
+          $ref: "#/components/responses/singleVehicle"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 1
+                  make: "Toyota"
+                  model: "Camry"
+                  year: 2020
+                  licensePlate: "ABC123"
+                  description: "Updated family sedan with new features"
+                  currentMileage: 15000
+                  createdOn: "2024-03-15T14:30:00Z"
+                links:
+                  - href: "/vehicles/1"
+                    rel: "self"
+                    method: "GET"
+                  - href: "/vehicles/1/trips"
+                    rel: "trips"
+                    method: "GET"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+
+    delete:
+      summary: Delete a vehicle by ID
+      tags:
+        - vehicle
+      operationId: deleteVehicle
+      responses:
+        "204":
+          description: Vehicle deleted
+        "404":
+          $ref: "#/components/responses/notFound"
+
+  /vehicles/{vehicleId}/trips:
+    parameters:
+      - $ref: "#/components/parameters/vehicleId"
+    get:
+      summary: Get trips for a vehicle
+      tags:
+        - trip
+      operationId: getTrips
+      parameters:
+        - $ref: "#/components/parameters/pageNumber"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: List of trips
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/pagedResourceResponse"
+              example:
+                resources:
+                  - resource:
+                      id: 1
+                      startLocation: "Home"
+                      endLocation: "Work"
+                      distance: 15.5
+                      startTime: "2024-03-15T08:00:00Z"
+                      endTime: "2024-03-15T08:30:00Z"
+                      driverId: "user123"
+                      createdOn: "2024-03-15T16:00:00Z"
+                      vehicleId: 1
+                    links:
+                      - href: "/vehicles/1/trips/1"
+                        rel: "self"
+                        method: "GET"
+                      - href: "/vehicles/1/trips/1/maintenanceRecords"
+                        rel: "maintenanceRecords"
+                        method: "GET"
+                links:
+                  - href: "/vehicles/1/trips?pageNumber=1&pageSize=10"
+                    rel: "self"
+                    method: "GET"
+          headers:
+            Pagination:
+              $ref: "#/components/headers/Pagination"
+
+    post:
+      description: "Add a trip"
+      tags:
+        - trip
+      operationId: createTrip
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/createTrip"
+            example:
+              startLocation: "Home"
+              endLocation: "Shopping Mall"
+              distance: 12.3
+              startTime: "2024-03-15T14:00:00Z"
+              endTime: "2024-03-15T14:20:00Z"
+              purpose: "Shopping"
+      responses:
+        "201":
+          $ref: "#/components/responses/singleTrip"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 2
+                  startLocation: "Home"
+                  endLocation: "Shopping Mall"
+                  distance: 12.3
+                  startTime: "2024-03-15T14:00:00Z"
+                  endTime: "2024-03-15T14:20:00Z"
+                  purpose: "Shopping"
+                  driverId: "user123"
+                  createdOn: "2024-03-15T16:30:00Z"
+                  vehicleId: 1
+                links:
+                  - href: "/vehicles/1/trips/2"
+                    rel: "self"
+                    method: "GET"
+                  - href: "/vehicles/1/trips/2/maintenanceRecords"
+                    rel: "maintenanceRecords"
+                    method: "GET"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+
+  /vehicles/{vehicleId}/trips/{tripId}:
+    parameters:
+      - $ref: "#/components/parameters/vehicleId"
+      - $ref: "#/components/parameters/tripId"
+    get:
+      summary: Get a specific trip for a vehicle
+      tags:
+        - trip
+      operationId: getTrip
+      responses:
+        "200":
+          $ref: "#/components/responses/singleTrip"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 1
+                  startLocation: "Home"
+                  endLocation: "Work"
+                  distance: 15.5
+                  startTime: "2024-03-15T08:00:00Z"
+                  endTime: "2024-03-15T08:30:00Z"
+                  purpose: "Commute"
+                  driverId: "user123"
+                  createdOn: "2024-03-15T16:00:00Z"
+                  vehicleId: 1
+                links:
+                  - href: "/vehicles/1/trips/1"
+                    rel: "self"
+                    method: "GET"
+                  - href: "/vehicles/1/trips/1/maintenanceRecords"
+                    rel: "maintenanceRecords"
+                    method: "GET"
+        "404":
+          $ref: "#/components/responses/notFound"
+
+    put:
+      summary: Update a trip for a vehicle
+      tags:
+        - trip
+      operationId: updateTrip
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/updateTrip"
+            example:
+              distance: 16.2
+              purpose: "Commute with detour"
+              fuelUsed: 1.2
+      responses:
+        "200":
+          $ref: "#/components/responses/singleTrip"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 1
+                  startLocation: "Home"
+                  endLocation: "Work"
+                  distance: 16.2
+                  startTime: "2024-03-15T08:00:00Z"
+                  endTime: "2024-03-15T08:30:00Z"
+                  purpose: "Commute with detour"
+                  fuelUsed: 1.2
+                  driverId: "user123"
+                  createdOn: "2024-03-15T16:00:00Z"
+                  vehicleId: 1
+                links:
+                  - href: "/vehicles/1/trips/1"
+                    rel: "self"
+                    method: "GET"
+                  - href: "/vehicles/1/trips/1/maintenanceRecords"
+                    rel: "maintenanceRecords"
+                    method: "GET"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+
+    delete:
+      summary: Delete a trip for a vehicle
+      tags:
+        - trip
+      operationId: deleteTrip
+      responses:
+        "204":
+          description: Trip deleted
+        "404":
+          $ref: "#/components/responses/notFound"
+
+  /vehicles/{vehicleId}/trips/{tripId}/maintenanceRecords:
+    parameters:
+      - $ref: "#/components/parameters/vehicleId"
+      - $ref: "#/components/parameters/tripId"
+    get:
+      summary: Get maintenance records for a specific trip
+      tags:
+        - maintenanceRecord
+      operationId: getMaintenanceRecords
+      parameters:
+        - $ref: "#/components/parameters/pageNumber"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: List of maintenance records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/pagedResourceResponse"
+              example:
+                resources:
+                  - resource:
+                      id: 1
+                      serviceType: "Oil Change"
+                      description: "Regular oil change"
+                      cost: 45.99
+                      mileage: 15000
+                      date: "2024-03-15T10:00:00Z"
+                      provider: "Quick Lube"
+                      nextServiceDue: "2024-06-15T00:00:00Z"
+                      createdOn: "2024-03-15T17:00:00Z"
+                      tripId: 1
+                    links:
+                      - href: "/vehicles/1/trips/1/maintenanceRecords/1"
+                        rel: "self"
+                        method: "GET"
+                links:
+                  - href: "/vehicles/1/trips/1/maintenanceRecords?pageNumber=1&pageSize=10"
+                    rel: "self"
+                    method: "GET"
+          headers:
+            Pagination:
+              $ref: "#/components/headers/Pagination"
+
+    post:
+      description: "Add a maintenance record to a specific trip"
+      tags:
+        - maintenanceRecord
+      operationId: createMaintenanceRecord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/createMaintenanceRecord"
+            example:
+              serviceType: "Tire Rotation"
+              description: "Rotated all tires"
+              cost: 25.50
+              mileage: 15500
+              date: "2024-03-15T11:00:00Z"
+              provider: "Tire Shop"
+              nextServiceDue: "2024-09-15T00:00:00Z"
+      responses:
+        "201":
+          $ref: "#/components/responses/singleMaintenanceRecord"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 2
+                  serviceType: "Tire Rotation"
+                  description: "Rotated all tires"
+                  cost: 25.50
+                  mileage: 15500
+                  date: "2024-03-15T11:00:00Z"
+                  provider: "Tire Shop"
+                  nextServiceDue: "2024-09-15T00:00:00Z"
+                  createdOn: "2024-03-15T17:02:00Z"
+                  tripId: 1
+                links:
+                  - href: "/vehicles/1/trips/1/maintenanceRecords/2"
+                    rel: "self"
+                    method: "GET"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+
+  /vehicles/{vehicleId}/trips/{tripId}/maintenanceRecords/{maintenanceRecordId}:
+    parameters:
+      - $ref: "#/components/parameters/vehicleId"
+      - $ref: "#/components/parameters/tripId"
+      - $ref: "#/components/parameters/maintenanceRecordId"
+    get:
+      summary: Get a specific maintenance record
+      tags:
+        - maintenanceRecord
+      operationId: getMaintenanceRecord
+      responses:
+        "200":
+          $ref: "#/components/responses/singleMaintenanceRecord"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 1
+                  serviceType: "Oil Change"
+                  description: "Regular oil change"
+                  cost: 45.99
+                  mileage: 15000
+                  date: "2024-03-15T10:00:00Z"
+                  provider: "Quick Lube"
+                  nextServiceDue: "2024-06-15T00:00:00Z"
+                  createdOn: "2024-03-15T17:00:00Z"
+                  tripId: 1
+                links:
+                  - href: "/vehicles/1/trips/1/maintenanceRecords/1"
+                    rel: "self"
+                    method: "GET"
+        "404":
+          $ref: "#/components/responses/notFound"
+
+    put:
+      summary: Update a maintenance record
+      tags:
+        - maintenanceRecord
+      operationId: updateMaintenanceRecord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/updateMaintenanceRecord"
+            example:
+              cost: 49.99
+              description: "Full synthetic oil change"
+              nextServiceDue: "2024-07-15T00:00:00Z"
+      responses:
+        "200":
+          $ref: "#/components/responses/singleMaintenanceRecord"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 1
+                  serviceType: "Oil Change"
+                  description: "Full synthetic oil change"
+                  cost: 49.99
+                  mileage: 15000
+                  date: "2024-03-15T10:00:00Z"
+                  provider: "Quick Lube"
+                  nextServiceDue: "2024-07-15T00:00:00Z"
+                  createdOn: "2024-03-15T17:00:00Z"
+                  tripId: 1
+                links:
+                  - href: "/vehicles/1/trips/1/maintenanceRecords/1"
+                    rel: "self"
+                    method: "GET"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+
+    delete:
+      summary: Delete a maintenance record
+      tags:
+        - maintenanceRecord
+      operationId: deleteMaintenanceRecord
+      responses:
+        "204":
+          description: Maintenance record deleted
+        "404":
+          $ref: "#/components/responses/notFound"
+
+  /vehicles/{vehicleId}/fuelRecords:
+    parameters:
+      - $ref: "#/components/parameters/vehicleId"
+    get:
+      summary: Get fuel records for a vehicle
+      tags:
+        - fuelRecord
+      operationId: getFuelRecords
+      parameters:
+        - $ref: "#/components/parameters/pageNumber"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: List of fuel records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/pagedResourceResponse"
+              example:
+                resources:
+                  - resource:
+                      id: 1
+                      date: "2024-03-10T14:30:00Z"
+                      gallons: 12.5
+                      costPerGallon: 3.45
+                      totalCost: 43.13
+                      mileage: 14500
+                      station: "Shell"
+                      fullTank: true
+                      createdOn: "2024-03-10T14:35:00Z"
+                      vehicleId: 1
+                    links:
+                      - href: "/vehicles/1/fuelRecords/1"
+                        rel: "self"
+                        method: "GET"
+                links:
+                  - href: "/vehicles/1/fuelRecords?pageNumber=1&pageSize=10"
+                    rel: "self"
+                    method: "GET"
+          headers:
+            Pagination:
+              $ref: "#/components/headers/Pagination"
+
+    post:
+      description: "Add a fuel record"
+      tags:
+        - fuelRecord
+      operationId: createFuelRecord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/createFuelRecord"
+            example:
+              date: "2024-03-15T14:30:00Z"
+              gallons: 10.2
+              costPerGallon: 3.55
+              totalCost: 36.21
+              mileage: 15200
+              station: "Chevron"
+              fullTank: true
+      responses:
+        "201":
+          $ref: "#/components/responses/singleFuelRecord"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 2
+                  date: "2024-03-15T14:30:00Z"
+                  gallons: 10.2
+                  costPerGallon: 3.55
+                  totalCost: 36.21
+                  mileage: 15200
+                  station: "Chevron"
+                  fullTank: true
+                  createdOn: "2024-03-15T14:35:00Z"
+                  vehicleId: 1
+                links:
+                  - href: "/vehicles/1/fuelRecords/2"
+                    rel: "self"
+                    method: "GET"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+
+  /vehicles/{vehicleId}/fuelRecords/{fuelRecordId}:
+    parameters:
+      - $ref: "#/components/parameters/vehicleId"
+      - $ref: "#/components/parameters/fuelRecordId"
+    get:
+      summary: Get a specific fuel record
+      tags:
+        - fuelRecord
+      operationId: getFuelRecord
+      responses:
+        "200":
+          $ref: "#/components/responses/singleFuelRecord"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 1
+                  date: "2024-03-10T14:30:00Z"
+                  gallons: 12.5
+                  costPerGallon: 3.45
+                  totalCost: 43.13
+                  mileage: 14500
+                  station: "Shell"
+                  fullTank: true
+                  createdOn: "2024-03-10T14:35:00Z"
+                  vehicleId: 1
+                links:
+                  - href: "/vehicles/1/fuelRecords/1"
+                    rel: "self"
+                    method: "GET"
+        "404":
+          $ref: "#/components/responses/notFound"
+
+    put:
+      summary: Update a fuel record
+      tags:
+        - fuelRecord
+      operationId: updateFuelRecord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/updateFuelRecord"
+            example:
+              gallons: 12.8
+              totalCost: 44.16
+              station: "Shell Plus"
+      responses:
+        "200":
+          $ref: "#/components/responses/singleFuelRecord"
+          content:
+            application/json:
+              example:
+                resource:
+                  id: 1
+                  date: "2024-03-10T14:30:00Z"
+                  gallons: 12.8
+                  costPerGallon: 3.45
+                  totalCost: 44.16
+                  mileage: 14500
+                  station: "Shell Plus"
+                  fullTank: true
+                  createdOn: "2024-03-10T14:35:00Z"
+                  vehicleId: 1
+                links:
+                  - href: "/vehicles/1/fuelRecords/1"
+                    rel: "self"
+                    method: "GET"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "422":
+          $ref: "#/components/responses/unprocessableEntity"
+
+    delete:
+      summary: Delete a fuel record
+      tags:
+        - fuelRecord
+      operationId: deleteFuelRecord
+      responses:
+        "204":
+          description: Fuel record deleted
+        "404":
+          $ref: "#/components/responses/notFound"
+
+  /vehicles/{vehicleId}/analytics:
+    parameters:
+      - $ref: "#/components/parameters/vehicleId"
+    get:
+      summary: Get vehicle analytics
+      description: "Get comprehensive cost analysis and usage statistics for a vehicle"
+      tags:
+        - analytics
+      operationId: getVehicleAnalytics
+      parameters:
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: The start date for the analysis period
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: The end date for the analysis period
+      responses:
+        "200":
+          description: Vehicle analytics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/vehicleAnalytics"
+              example:
+                totalCost: 1245.67
+                mileage: 3500
+                costPerMile: 0.36
+                totalTrips: 87
+                fuelEfficiency: 28.5
+                maintenanceCosts: 350.25
+                fuelCosts: 895.42
+                upcomingMaintenance:
+                  - type: "Oil Change"
+                    dueDate: "2024-04-15"
+                    estimatedCost: 45.99
+                  - type: "Tire Rotation"
+                    dueDate: "2024-05-01"
+                    estimatedCost: 25.00
+                fuelEfficiencyTrend:
+                  - date: "2024-01-01"
+                    mpg: 27.8
+                  - date: "2024-02-01"
+                    mpg: 28.2
+                  - date: "2024-03-01"
+                    mpg: 28.5
+                costByCategory:
+                  fuel: 895.42
+                  maintenance: 350.25
+                  repairs: 0.00
+                costByMonth:
+                  - month: "2024-01"
+                    cost: 420.15
+                  - month: "2024-02"
+                    cost: 387.22
+                  - month: "2024-03"
+                    cost: 438.30
+        "404":
+          $ref: "#/components/responses/notFound"
+
+  /vehicles/analytics:
+    get:
+      summary: Get analytics for all vehicles
+      description: "Get comparative analytics across all vehicles in the fleet"
+      tags:
+        - analytics
+      operationId: getFleetAnalytics
+      parameters:
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: The start date for the analysis period
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: The end date for the analysis period
+      responses:
+        "200":
+          description: Fleet analytics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/fleetAnalytics"
+              example:
+                totalVehicles: 3
+                totalMileage: 32500
+                totalCost: 7865.42
+                costBreakdown:
+                  vehicle1: 3245.18
+                  vehicle2: 2896.54
+                  vehicle3: 1723.70
+                averageCostPerMile: 0.24
+                averageFuelEfficiency: 26.8
+                mostUsedVehicle:
+                  id: 1
+                  make: "Toyota"
+                  model: "Camry"
+                  trips: 152
+                mostEfficientVehicle:
+                  id: 3
+                  make: "Honda"
+                  model: "Civic"
+                  mpg: 32.4
+                costTrend:
+                  - month: "2024-01"
+                    cost: 2586.23
+                  - month: "2024-02"
+                    cost: 2495.87
+                  - month: "2024-03"
+                    cost: 2783.32
+                upcomingMaintenance:
+                  - vehicleId: 1
+                    type: "Oil Change"
+                    dueDate: "2024-04-15"
+                  - vehicleId: 2
+                    type: "Brake Inspection"
+                    dueDate: "2024-04-22"
+                  - vehicleId: 3
+                    type: "Tire Rotation"
+                    dueDate: "2024-05-05"
+
+  /accounts:
+    post:
+      summary: Register a new user account
+      tags:
+        - auth
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/registerUserDto"
+      responses:
+        "201":
+          description: User successfully created
+        "422":
+          description: Username already taken or validation failed
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/problemDetails"
+              example:
+                type: "https://api.example.com/errors/validation"
+                title: "Validation Error"
+                status: 422
+                detail: "Username already taken"
+                instance: "/api/accounts"
+
+  /login:
+    post:
+      summary: Login to get access token
+      tags:
+        - auth
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/loginDto"
+      responses:
+        "200":
+          description: Successfully logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/successfulLoginDto"
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: "RefreshToken=xyz...; HttpOnly; SameSite=Lax"
+        "422":
+          description: Invalid credentials
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/problemDetails"
+              example:
+                type: "https://api.example.com/errors/validation"
+                title: "Authentication Error"
+                status: 422
+                detail: "Invalid username or password"
+                instance: "/api/login"
+
+  /accessToken:
+    post:
+      summary: Refresh access token using refresh token
+      tags:
+        - auth
+      operationId: refreshToken
+      responses:
+        "200":
+          description: New access token generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/successfulLoginDto"
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: "RefreshToken=xyz...; HttpOnly; SameSite=Lax"
+        "422":
+          description: Invalid or expired refresh token
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/problemDetails"
+
+  /logout:
+    post:
+      summary: Logout and invalidate refresh token
+      tags:
+        - auth
+      operationId: logout
+      responses:
+        "200":
+          description: Successfully logged out
+        "422":
+          description: Invalid refresh token
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/problemDetails"
+
+components:
+  schemas:
+    vehicle:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        make:
+          type: string
+          example: "Toyota"
+        model:
+          type: string
+          example: "Camry"
+        year:
+          type: integer
+          example: 2020
+        licensePlate:
+          type: string
+          example: "ABC123"
+        description:
+          type: string
+          example: "Family sedan"
+        currentMileage:
+          type: integer
+          example: 15000
+        createdOn:
+          type: string
+          format: date-time
+          example: "2024-03-15T14:30:00Z"
+
+    createVehicle:
+      type: object
+      required:
+        - make
+        - model
+        - year
+        - licensePlate
+        - description
+      properties:
+        make:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Ford"
+        model:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: "Explorer"
+        year:
+          type: integer
+          minimum: 1900
+          maximum: 2100
+          example: 2021
+        licensePlate:
+          type: string
+          minLength: 1
+          maxLength: 20
+          example: "DEF456"
+        description:
+          type: string
+          minLength: 5
+          maxLength: 300
+          example: "Family SUV for road trips"
+        currentMileage:
+          type: integer
+          minimum: 0
+          example: 5000
+
+    updateVehicle:
+      type: object
+      required:
+        - description
+      properties:
+        description:
+          type: string
+          minLength: 5
+          maxLength: 300
+          example: "Updated family sedan with new features"
+        currentMileage:
+          type: integer
+          minimum: 0
+          example: 15000
+
+    trip:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        startLocation:
+          type: string
+          example: "Home"
+        endLocation:
+          type: string
+          example: "Work"
+        distance:
+          type: number
+          format: float
+          example: 15.5
+        startTime:
+          type: string
+          format: date-time
+          example: "2024-03-15T08:00:00Z"
+        endTime:
+          type: string
+          format: date-time
+          example: "2024-03-15T08:30:00Z"
+        purpose:
+          type: string
+          example: "Commute"
+        fuelUsed:
+          type: number
+          format: float
+          example: 1.1
+        driverId:
+          type: string
+          example: "user123"
+        createdOn:
+          type: string
+          format: date-time
+          example: "2024-03-15T16:00:00Z"
+        vehicleId:
+          type: integer
+          example: 1
+
+    createTrip:
+      type: object
+      required:
+        - startLocation
+        - endLocation
+        - distance
+        - startTime
+        - endTime
+      properties:
+        startLocation:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: "Home"
+        endLocation:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: "Shopping Mall"
+        distance:
+          type: number
+          format: float
+          minimum: 0
+          example: 12.3
+        startTime:
+          type: string
+          format: date-time
+          example: "2024-03-15T14:00:00Z"
+        endTime:
+          type: string
+          format: date-time
+          example: "2024-03-15T14:20:00Z"
+        purpose:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Shopping"
+        fuelUsed:
+          type: number
+          format: float
+          minimum: 0
+          example: 0.9
+
+    updateTrip:
+      type: object
+      properties:
+        distance:
+          type: number
+          format: float
+          minimum: 0
+          example: 16.2
+        purpose:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Commute with detour"
+        fuelUsed:
+          type: number
+          format: float
+          minimum: 0
+          example: 1.2
+
+    maintenanceRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        serviceType:
+          type: string
+          example: "Oil Change"
+        description:
+          type: string
+          example: "Regular oil change"
+        cost:
+          type: number
+          format: float
+          example: 45.99
+        mileage:
+          type: integer
+          example: 15000
+        date:
+          type: string
+          format: date-time
+          example: "2024-03-15T10:00:00Z"
+        provider:
+          type: string
+          example: "Quick Lube"
+        nextServiceDue:
+          type: string
+          format: date-time
+          example: "2024-06-15T00:00:00Z"
+        createdOn:
+          type: string
+          format: date-time
+          example: "2024-03-15T17:00:00Z"
+        tripId:
+          type: integer
+          example: 1
+
+    createMaintenanceRecord:
+      type: object
+      required:
+        - serviceType
+        - description
+        - cost
+        - mileage
+        - date
+      properties:
+        serviceType:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Tire Rotation"
+        description:
+          type: string
+          minLength: 1
+          maxLength: 300
+          example: "Rotated all tires"
+        cost:
+          type: number
+          format: float
+          minimum: 0
+          example: 25.50
+        mileage:
+          type: integer
+          minimum: 0
+          example: 15500
+        date:
+          type: string
+          format: date-time
+          example: "2024-03-15T11:00:00Z"
+        provider:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Tire Shop"
+        nextServiceDue:
+          type: string
+          format: date-time
+          example: "2024-09-15T00:00:00Z"
+
+    updateMaintenanceRecord:
+      type: object
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 300
+          example: "Full synthetic oil change"
+        cost:
+          type: number
+          format: float
+          minimum: 0
+          example: 49.99
+        provider:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Quick Lube Plus"
+        nextServiceDue:
+          type: string
+          format: date-time
+          example: "2024-07-15T00:00:00Z"
+
+    fuelRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        date:
+          type: string
+          format: date-time
+          example: "2024-03-10T14:30:00Z"
+        gallons:
+          type: number
+          format: float
+          example: 12.5
+        costPerGallon:
+          type: number
+          format: float
+          example: 3.45
+        totalCost:
+          type: number
+          format: float
+          example: 43.13
+        mileage:
+          type: integer
+          example: 14500
+        station:
+          type: string
+          example: "Shell"
+        fullTank:
+          type: boolean
+          example: true
+        createdOn:
+          type: string
+          format: date-time
+          example: "2024-03-10T14:35:00Z"
+        vehicleId:
+          type: integer
+          example: 1
+
+    createFuelRecord:
+      type: object
+      required:
+        - date
+        - gallons
+        - costPerGallon
+        - totalCost
+        - mileage
+      properties:
+        date:
+          type: string
+          format: date-time
+          example: "2024-03-15T14:30:00Z"
+        gallons:
+          type: number
+          format: float
+          minimum: 0
+          example: 10.2
+        costPerGallon:
+          type: number
+          format: float
+          minimum: 0
+          example: 3.55
+        totalCost:
+          type: number
+          format: float
+          minimum: 0
+          example: 36.21
+        mileage:
+          type: integer
+          minimum: 0
+          example: 15200
+        station:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Chevron"
+        fullTank:
+          type: boolean
+          example: true
+
+    updateFuelRecord:
+      type: object
+      properties:
+        gallons:
+          type: number
+          format: float
+          minimum: 0
+          example: 12.8
+        totalCost:
+          type: number
+          format: float
+          minimum: 0
+          example: 44.16
+        station:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Shell Plus"
+        fullTank:
+          type: boolean
+          example: true
+
+    vehicleAnalytics:
+      type: object
+      properties:
+        totalCost:
+          type: number
+          format: float
+          example: 1245.67
+        mileage:
+          type: integer
+          example: 3500
+        costPerMile:
+          type: number
+          format: float
+          example: 0.36
+        totalTrips:
+          type: integer
+          example: 87
+        fuelEfficiency:
+          type: number
+          format: float
+          example: 28.5
+        maintenanceCosts:
+          type: number
+          format: float
+          example: 350.25
+        fuelCosts:
+          type: number
+          format: float
+          example: 895.42
+        upcomingMaintenance:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "Oil Change"
+              dueDate:
+                type: string
+                format: date
+                example: "2024-04-15"
+              estimatedCost:
+                type: number
+                format: float
+                example: 45.99
+        fuelEfficiencyTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+                example: "2024-01-01"
+              mpg:
+                type: number
+                format: float
+                example: 27.8
+        costByCategory:
+          type: object
+          properties:
+            fuel:
+              type: number
+              format: float
+              example: 895.42
+            maintenance:
+              type: number
+              format: float
+              example: 350.25
+            repairs:
+              type: number
+              format: float
+              example: 0.00
+        costByMonth:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: string
+                example: "2024-01"
+              cost:
+                type: number
+                format: float
+                example: 420.15
+
+    fleetAnalytics:
+      type: object
+      properties:
+        totalVehicles:
+          type: integer
+          example: 3
+        totalMileage:
+          type: integer
+          example: 32500
+        totalCost:
+          type: number
+          format: float
+          example: 7865.42
+        costBreakdown:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          example:
+            vehicle1: 3245.18
+            vehicle2: 2896.54
+            vehicle3: 1723.70
+        averageCostPerMile:
+          type: number
+          format: float
+          example: 0.24
+        averageFuelEfficiency:
+          type: number
+          format: float
+          example: 26.8
+        mostUsedVehicle:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            make:
+              type: string
+              example: "Toyota"
+            model:
+              type: string
+              example: "Camry"
+            trips:
+              type: integer
+              example: 152
+        mostEfficientVehicle:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 3
+            make:
+              type: string
+              example: "Honda"
+            model:
+              type: string
+              example: "Civic"
+            mpg:
+              type: number
+              format: float
+              example: 32.4
+        costTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: string
+                example: "2024-01"
+              cost:
+                type: number
+                format: float
+                example: 2586.23
+        upcomingMaintenance:
+          type: array
+          items:
+            type: object
+            properties:
+              vehicleId:
+                type: integer
+                example: 1
+              type:
+                type: string
+                example: "Oil Change"
+              dueDate:
+                type: string
+                format: date
+                example: "2024-04-15"
+
+    link:
+      type: object
+      properties:
+        href:
+          type: string
+          example: "/vehicles/1"
+        rel:
+          type: string
+          example: "self"
+        method:
+          type: string
+          example: "GET"
+
+    resourceWithLinks:
+      type: object
+      properties:
+        resource:
+          type: object
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/link"
+
+    pagedResourceResponse:
+      type: object
+      properties:
+        resources:
+          type: array
+          items:
+            $ref: "#/components/schemas/resourceWithLinks"
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/link"
+
+    problemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+          example: "https://api.example.com/errors/validation"
+        title:
+          type: string
+          example: "Validation Error"
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+          example: "The request contains invalid parameters"
+        instance:
+          type: string
+          format: uri
+          example: "/vehicles/1/trips"
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            make:
+              ["Make is required", "Make must be between 2 and 50 characters"]
+            year: ["Year must be between 1900 and 2100"]
+
+    registerUserDto:
+      type: object
+      required:
+        - userName
+        - email
+        - password
+      properties:
+        userName:
+          type: string
+          example: "john.doe"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        password:
+          type: string
+          format: password
+          example: "MySecurePassword123"
+
+    loginDto:
+      type: object
+      required:
+        - userName
+        - password
+      properties:
+        userName:
+          type: string
+          example: "john.doe"
+        password:
+          type: string
+          format: password
+          example: "MySecurePassword123"
+
+    successfulLoginDto:
+      type: object
+      required:
+        - accessToken
+      properties:
+        accessToken:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIs..."
+
+  responses:
+    singleVehicle:
+      description: A single vehicle
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/resourceWithLinks"
+
+    singleTrip:
+      description: A single trip
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/resourceWithLinks"
+
+    singleMaintenanceRecord:
+      description: A single maintenance record
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/resourceWithLinks"
+
+    singleFuelRecord:
+      description: A single fuel record
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/resourceWithLinks"
+
+    badRequest:
+      description: Bad request response
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/problemDetails"
+          example:
+            type: "https://api.example.com/errors/validation"
+            title: "Validation Error"
+            status: 400
+            detail: "The request contains invalid parameters"
+            instance: "/vehicles/1/trips"
+            errors:
+              startLocation:
+                [
+                  "Start location is required",
+                  "Start location must be between 2 and 100 characters",
+                ]
+              distance: ["Distance must be greater than 0"]
+
+    unprocessableEntity:
+      description: Unprocessable entity response
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/problemDetails"
+          example:
+            type: "https://api.example.com/errors/business-rule"
+            title: "Business Rule Violation"
+            status: 422
+            detail: "The operation cannot be completed due to business rule violations"
+            instance: "/vehicles/1/trips/1/maintenanceRecords"
+            errors:
+              maintenance:
+                ["Vehicle mileage cannot be less than previous maintenance record mileage"]
+
+    notFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/problemDetails"
+          example:
+            type: "https://api.example.com/errors/not-found"
+            title: "Resource Not Found"
+            status: 404
+            detail: "The requested resource was not found"
+            instance: "/vehicles/999"
+
+  parameters:
+    vehicleId:
+      name: vehicleId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: The unique identifier of the vehicle
+      example: 1
+
+    tripId:
+      name: tripId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: The unique identifier of the trip
+      example: 1
+
+    maintenanceRecordId:
+      name: maintenanceRecordId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: The unique identifier of the maintenance record
+      example: 1
+
+    fuelRecordId:
+      name: fuelRecordId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: The unique identifier of the fuel record
+      example: 1
+
+    pageNumber:
+      name: pageNumber
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: The page number for pagination
+      example: 1
+
+    pageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 10
+      description: The number of items per page for pagination
+      example: 10
+
+  headers:
+    Pagination:
+      description: Pagination metadata
+      schema:
+        type: string
+      example: "Total-Count: 25, Page-Count: 3, Page-Size: 10, Page-Number: 1"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: vehicle
+    description: Operations related to vehicles
+  - name: trip
+    description: Operations related to trips
+  - name: maintenanceRecord
+    description: Operations related to maintenance records
+  - name: fuelRecord
+    description: Operations related to fuel records
+  - name: analytics
+    description: Operations related to vehicle analytics
+  - name: auth
+    description: Authentication operations
+
+externalDocs:
+  description: Find more info here
+  url: https://example.com/docs

@@ -6,49 +6,37 @@
 
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+ font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+ line-height: 1.5;
+ font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+ /* Change to light mode base colors */
+ color-scheme: light;
+ color: rgba(0, 0, 0, 0.87);
+ background-color: #f8f9fa;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+ font-synthesis: none;
+ text-rendering: optimizeLegibility;
+ -webkit-font-smoothing: antialiased;
+ -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+/* Override html class to ensure light mode */
+html {
+  background-color: #f8f9fa;
 }
 
+/* Update body styles for light mode */
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  overflow-x: hidden; /* Hide horizontal overflow if needed */
+  overflow-x: hidden;
+  background-color: #f8f9fa;
+  color: #333;
 }
 
-
-/* Ensure images shrink properly */
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
+/* Update button styles for light mode */
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -56,27 +44,59 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #e9ecef;
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
   border-color: #646cff;
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* For debug sections, ensure visibility */
+.debug-section {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 20px;
+}
+
+.debug-section h3 {
+  color: #333;
+}
+
+.debug-section p, .debug-section li {
+  color: #555;
+}
+
+/* Apply consistent text colors for all contexts */
+.text-gray-500, .text-gray-600, .text-gray-700, .text-gray-900 {
+  color: #6c757d !important;
+}
+
+.text-gray-800, .text-gray-900 {
+  color: #343a40 !important;
+}
+
+/* Ensure all card backgrounds are white */
+.bg-white {
+  background-color: white !important;
+}
+
+/* Keep forms and inputs clear */
+input, textarea, select {
+  background-color: white !important;
+  color: #333 !important;
+}
+
+/* Ensure dark text on any lightest backgrounds */
+.bg-gray-50, .bg-gray-100, .bg-gray-200 {
+  color: #333 !important;
 }
