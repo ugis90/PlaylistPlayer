@@ -21,11 +21,13 @@ import apiClient from "../api/client";
 import { Vehicle, Trip } from "../types";
 import { useAuth } from "../auth/AuthContext";
 
-interface UserData {
+// Define a type for the raw user data from the API
+// This acknowledges that 'roles' might come as a single string or an array
+interface RawApiUser {
   id: string;
   userName: string;
   email: string;
-  roles: string[];
+  roles: string | string[] | null | undefined; // More flexible for incoming data
   lastLocation?: {
     latitude: number;
     longitude: number;
@@ -35,13 +37,29 @@ interface UserData {
   };
   vehicles?: Vehicle[];
   activeTrips?: Trip[];
-  lastSeen?: string;
+}
+
+interface UserData {
+  id: string;
+  userName: string;
+  email: string;
+  roles: string[]; // Client-side, roles will always be string[]
+  lastLocation?: {
+    latitude: number;
+    longitude: number;
+    timestamp: string;
+    speed?: number | null;
+    heading?: number | null;
+  };
+  vehicles?: Vehicle[];
+  activeTrips?: Trip[];
+  lastSeen?: string; // Derived client-side
 }
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [apiError, setApiError] = useState<string | null>(null); // Error state
+  const [apiError, setApiError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [filterActive, setFilterActive] = useState<boolean>(false);
@@ -51,13 +69,11 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     isMounted.current = true;
-    // Check role immediately if userInfo is available
     if (userInfo && userInfo.role !== "ADMIN") {
       toast.error("Access denied. Admin privileges required.");
       navigate("/");
-      return; // Prevent fetching if not admin
+      return;
     }
-    // Fetch data only if authenticated and potentially admin
     if (isAuthenticated && userInfo?.role === "ADMIN") {
       fetchUsersAndData();
       const interval = setInterval(fetchUsersAndData, 30000);
@@ -66,55 +82,102 @@ const AdminDashboard = () => {
         clearInterval(interval);
       };
     } else if (!isAuthenticated) {
-      // If not authenticated, stop loading (PrivateRoute will redirect)
       setIsLoading(false);
     }
-    // If authenticated but role is not ADMIN (and check passed initially),
-    // this effect won't run fetch, isLoading remains true until redirect
     return () => {
       isMounted.current = false;
-    }; // Cleanup mount status
-  }, [isAuthenticated, userInfo, navigate]); // Add navigate dependency
+    };
+  }, [isAuthenticated, userInfo, navigate]);
 
   const fetchUsersAndData = async () => {
     if (!isMounted.current) return;
     setIsLoading(true);
-    setApiError(null); // Clear previous error
+    setApiError(null);
     try {
       console.log("Fetching users from /api/users...");
-      const usersResponse = await apiClient.get<UserData[]>("/users");
+      // Use RawApiUser for the expected response type from the API
+      const usersResponse = await apiClient.get<RawApiUser[]>("/users");
       console.log("Users response data:", usersResponse.data);
 
       let fetchedUsers: UserData[] = [];
       if (Array.isArray(usersResponse.data)) {
-        fetchedUsers = usersResponse.data.map((user) => ({
-          ...user,
-          roles: Array.isArray(user.roles)
-            ? user.roles
-            : [user.roles].filter(Boolean),
-          lastSeen: user.lastLocation?.timestamp
-            ? new Date(user.lastLocation.timestamp).toLocaleString()
-            : undefined,
-        }));
+        // Map RawApiUser to UserData, ensuring transformations are clear
+        fetchedUsers = usersResponse.data.map(
+          (rawUser: RawApiUser): UserData => {
+            let processedRoles: string[];
+            if (Array.isArray(rawUser.roles)) {
+              processedRoles = rawUser.roles;
+            } else if (
+              typeof rawUser.roles === "string" &&
+              rawUser.roles.trim() !== ""
+            ) {
+              processedRoles = [rawUser.roles];
+            } else {
+              // Handles null, undefined, or empty string for roles by defaulting to an empty array
+              processedRoles = [];
+            }
+
+            return {
+              // Spread properties that are the same
+              id: rawUser.id,
+              userName: rawUser.userName,
+              email: rawUser.email,
+              lastLocation: rawUser.lastLocation,
+              vehicles: rawUser.vehicles,
+              activeTrips: rawUser.activeTrips,
+              // Apply transformations
+              roles: processedRoles,
+              lastSeen: rawUser.lastLocation?.timestamp
+                ? new Date(rawUser.lastLocation.timestamp).toLocaleString()
+                : undefined,
+            };
+          },
+        );
         console.log("Formatted users:", fetchedUsers);
       } else {
         console.warn(
-          "Unexpected data format from /api/users:",
+          "Unexpected data format from /api/users. Expected an array:",
           usersResponse.data,
         );
+        // Ensure users is an empty array if data format is wrong
+        fetchedUsers = [];
       }
 
       if (isMounted.current) {
         setUsers(fetchedUsers);
         setLastRefreshed(new Date());
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Changed from 'any' to 'unknown'
       console.error("Error fetching admin dashboard data:", error);
-      const errorMsg = error.response?.data || "Failed to load admin data";
+      let errorMsg = "Failed to load admin data";
+
+      // Type guard for Axios-like errors (adjust if your apiClient has a different error structure)
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        (error as any).response &&
+        typeof (error as any).response.data === "string"
+      ) {
+        errorMsg = (error as any).response.data;
+      } else if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        (error as any).response &&
+        (error as any).response.data &&
+        typeof (error as any).response.data.message === "string"
+      ) {
+        errorMsg = (error as any).response.data.message;
+      } else if (error instanceof Error) {
+        errorMsg = error.message;
+      }
+
       if (isMounted.current) {
         toast.error(errorMsg);
-        setApiError(errorMsg); // Set error state
-        setUsers([]);
+        setApiError(errorMsg);
+        setUsers([]); // Clear users on error
       }
     } finally {
       if (isMounted.current) setIsLoading(false);
@@ -244,7 +307,7 @@ const AdminDashboard = () => {
             <Loader className="h-6 w-6 animate-spin mx-auto text-blue-500" />
           </div>
         ) : apiError ? (
-          <div className="p-6 text-center text-red-600">Error: {apiError}</div> // Show API error
+          <div className="p-6 text-center text-red-600">Error: {apiError}</div>
         ) : filteredUsers.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             No users found matching criteria.
@@ -267,9 +330,13 @@ const AdminDashboard = () => {
                         <p className="text-sm text-gray-600">{user.email}</p>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 mt-1 pl-13">
+                    {/* Consider changing pl-13 to a standard Tailwind value like pl-12 if it's a typo */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 mt-1 pl-12 md:pl-13">
+                      {" "}
+                      {/* Adjusted pl-13, check if it's intended or pl-12 */}
                       <span className="inline-flex items-center bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs font-medium">
-                        {user.roles?.join(", ") || "No Role"}
+                        {user.roles.join(", ") || "No Role"}{" "}
+                        {/* user.roles is now guaranteed string[] */}
                       </span>
                       <div
                         className={`flex items-center ${isActive(user) ? "text-green-600" : "text-gray-500"}`}
@@ -299,12 +366,14 @@ const AdminDashboard = () => {
                       {" "}
                       <Eye className="h-4 w-4 mr-1" /> Location{" "}
                     </button>
-                    {/* Add more admin actions like Edit Role, Disable User etc. */}
                   </div>
                 </div>
                 {/* Location data snippet */}
                 {user.lastLocation && (
-                  <div className="mt-3 pl-13 pt-2 border-t border-gray-100">
+                  // Consider changing pl-13 to a standard Tailwind value like pl-12 if it's a typo
+                  <div className="mt-3 pl-12 md:pl-13 pt-2 border-t border-gray-100">
+                    {" "}
+                    {/* Adjusted pl-13 */}
                     <div className="flex items-center text-xs text-gray-500">
                       <MapPin className="h-3 w-3 mr-1 text-red-500" />
                       {user.lastLocation.latitude.toFixed(4)},{" "}

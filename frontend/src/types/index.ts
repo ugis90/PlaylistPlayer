@@ -13,6 +13,7 @@ export interface ChartData {
 }
 
 export interface Vehicle {
+  createdAt: Date;
   id: number;
   make: string;
   model: string;
