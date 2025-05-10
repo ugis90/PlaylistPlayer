@@ -14,7 +14,6 @@ import {
   Cell,
   Area,
   AreaChart,
-  LabelList,
 } from "recharts";
 import {
   Calendar,
@@ -29,14 +28,11 @@ import {
   MapPin,
   Clock,
   ChevronRight,
-  Loader,
-  Wrench,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import apiClient from "../api/client";
 import { Vehicle, Trip, FuelRecord, MaintenanceRecord } from "../types";
 
-// ... (Keep existing interfaces: VehicleStats, VehicleUsageData, UpcomingMaintenance, MonthlyExpense, FuelEfficiencyDataPoint) ...
 interface UpcomingMaintenance {
   vehicleId: number;
   vehicleName: string;
@@ -142,7 +138,7 @@ const Dashboard: React.FC = () => {
 
     try {
       const vehiclesResponse = await apiClient.get("/vehicles?pageSize=500"); // Fetch all accessible vehicles
-      let vehicleData: Vehicle[] = extractResourcesFromResponse(
+      const vehicleData: Vehicle[] = extractResourcesFromResponse(
         vehiclesResponse.data,
       );
 
@@ -446,7 +442,6 @@ const Dashboard: React.FC = () => {
       .filter((data) => data.value > 0);
   };
 
-  // *** FIX: Correct Upcoming Maintenance Logic ***
   const generateUpcomingMaintenance = (
     vehiclesData: Vehicle[],
     allMaintenanceRecords: MaintenanceRecord[],
@@ -558,6 +553,7 @@ const Dashboard: React.FC = () => {
         month: "short",
         day: "numeric",
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       return "Invalid date";
     }

@@ -1,9 +1,4 @@
-﻿export const metadata = {
-  title: "PlaylistPlayer",
-  description: "Manage your music playlists",
-};
-
-export default function RootLayout({
+﻿export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;

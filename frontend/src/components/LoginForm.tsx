@@ -4,8 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { toast } from "sonner";
-import apiClient from "../api/client";
 
 export function LoginForm() {
   const [formData, setFormData] = useState({ userName: "", password: "" });
@@ -18,22 +16,16 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      // --- Removed Mock Logins ---
-      // Rely solely on the actual API login now
-
       await login(formData.userName, formData.password);
       navigate("/"); // Navigate to dashboard on successful login
     } catch (err: any) {
-      // Error is handled and toasted within the login function in AuthContext
       console.error("Login component caught error:", err);
-      // Optionally add more specific UI feedback here if needed
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    // *** FIX: Reduced bottom padding/margin if needed ***
     <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow space-y-6">
       <h2 className="text-2xl font-bold text-center mb-6">Login</h2>{" "}
       {/* Centered Title */}

@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  Users,
   Car,
   Map,
   MapPin,
@@ -103,7 +102,6 @@ const FamilyDashboard: React.FC = () => {
 
   const loadGoogleMapsScript = () => {
     if (!window.google || !window.google.maps) {
-      // In a real app, use your Google Maps API key
       const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
       const script = document.createElement("script");
       script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;

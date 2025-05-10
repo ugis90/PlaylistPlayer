@@ -1,5 +1,5 @@
 ﻿// src/components/VehicleList.tsx
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -17,7 +17,7 @@ import {
   Loader,
 } from "lucide-react";
 import apiClient from "../api/client";
-import { Vehicle } from "../types"; // Assuming Vehicle type is defined correctly
+import { Vehicle } from "../types";
 import { useAuth } from "../auth/AuthContext";
 import {
   useQuery,
@@ -38,7 +38,6 @@ interface VehicleApiResponse {
   resource: Array<{ resource: Vehicle; links: any[] }>;
   links: any[];
 }
-// Define the structure of the data returned by useQuery's `data` property
 interface VehicleQueryResponseData {
   vehicles: Vehicle[];
   pagination: PaginationInfo;
@@ -92,12 +91,10 @@ const VehicleList = () => {
     error,
     isFetching, // Use isFetching for background refetches/pagination fetches
     refetch,
-    // isPreviousData, // Deprecated
   } = useQuery<VehicleQueryResponseData, Error>({
-    // Use the defined interface here
     queryKey: queryKey,
     queryFn: async ({ queryKey }): Promise<VehicleQueryResponseData> => {
-      // *** FIX: Destructure queryKey correctly, mark unused with _ ***
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [_key, page, size, search] = queryKey as [
         string,
         number,
@@ -155,13 +152,9 @@ const VehicleList = () => {
       return { vehicles: validVehicles, pagination: fetchedPaginationInfo };
     },
     staleTime: 60 * 1000,
-    // *** FIX: Use gcTime instead of cacheTime in v5 ***
     gcTime: 5 * 60 * 1000,
-    // *** FIX: Remove keepPreviousData or use placeholderData if needed ***
-    // keepPreviousData: true, // Deprecated
   });
 
-  // *** FIX: Access data correctly from queryResult.data ***
   const vehicles = queryResult?.vehicles ?? [];
   // Use the local pagination state for UI controls and display text
   const currentPagination = pagination;
@@ -604,7 +597,6 @@ const VehicleList = () => {
       </div>
 
       {/* Pagination Controls - Use currentPagination */}
-      {/* *** FIX: Use isLoading for initial loading check *** */}
       {currentPagination.totalCount > 0 && !isLoading && (
         <div className="flex justify-between items-center mt-6">
           <div className="text-sm text-gray-600">

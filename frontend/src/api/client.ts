@@ -2,8 +2,8 @@
 import { toast } from "sonner";
 
 export const apiClient = axios.create({
-  //baseURL: "https://octopus-app-3t93j.ondigitalocean.app/api",
-  baseURL: "http://localhost:5006/api",
+  baseURL: "https://octopus-app-3t93j.ondigitalocean.app/api",
+  //baseURL: "http://localhost:5006/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -29,13 +29,11 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // --- Enhanced Logging ---
     console.log(
       `🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`,
       // `\nHeaders:`, config.headers, // Uncomment for detailed header logging
       // `\nData:`, config.data // Uncomment for detailed data logging
     );
-    // --- End Enhanced Logging ---
     return config;
   },
   (error) => {
@@ -47,7 +45,6 @@ apiClient.interceptors.request.use(
 // Add response interceptor for handling 401, 422, and logging
 apiClient.interceptors.response.use(
   (response) => {
-    // --- Enhanced Logging ---
     console.log(
       `✅ API Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`,
       // `\nHeaders:`, response.headers, // Uncomment for detailed header logging
@@ -57,7 +54,6 @@ apiClient.interceptors.response.use(
     if (response.headers["pagination"]) {
       console.log("📄 Pagination Header:", response.headers["pagination"]);
     }
-    // --- End Enhanced Logging ---
     return response;
   },
   async (error: AxiosError) => {
@@ -66,7 +62,6 @@ apiClient.interceptors.response.use(
 
     const originalRequest = error.config;
 
-    // --- Detailed Error Logging ---
     if (error.response) {
       console.error(`Response Status: ${error.response.status}`);
       console.error("Response Data:", error.response.data);
@@ -76,14 +71,13 @@ apiClient.interceptors.response.use(
     } else {
       console.error("Error setting up request:", error.message);
     }
-    // --- End Detailed Error Logging ---
 
     // Handle 401 Unauthorized (Token Expired / Invalid)
     // Ensure originalRequest exists and _retry flag is not set
     if (
       error.response?.status === 401 &&
       originalRequest &&
-      !originalRequest._retry
+      !(originalRequest as any)._retry
     ) {
       if (isRefreshing) {
         // Wait for the new token if refresh is already in progress
@@ -97,7 +91,7 @@ apiClient.interceptors.response.use(
         });
       }
 
-      originalRequest._retry = true; // Mark request as retried
+      (originalRequest as any)._retry = true; // Mark request as retried
       isRefreshing = true;
 
       try {

@@ -30,7 +30,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import apiClient from "../api/client";
-import { Vehicle } from "../types";
+import { FuelRecord, Vehicle } from "../types";
 
 // Define types for analytics data
 interface VehicleAnalytics {
@@ -183,7 +183,7 @@ const VehicleAnalytics = () => {
         fuelRecords = fuelResponse.data;
       } else if (fuelResponse.data?.resources) {
         fuelRecords = fuelResponse.data.resources.map(
-          (item) => item.resource || item,
+          (item: { resource: any }) => item.resource || item,
         );
       } else if (typeof fuelResponse.data === "object") {
         Object.keys(fuelResponse.data).forEach((key) => {
@@ -194,7 +194,7 @@ const VehicleAnalytics = () => {
       }
 
       // Now fetch maintenance records for each trip
-      let maintenanceRecords = [];
+      let maintenanceRecords: any[] = [];
       for (const trip of trips) {
         try {
           const maintenanceResponse = await apiClient.get(
@@ -206,7 +206,7 @@ const VehicleAnalytics = () => {
             tripMaintenance = maintenanceResponse.data;
           } else if (maintenanceResponse.data?.resources) {
             tripMaintenance = maintenanceResponse.data.resources.map(
-              (item) => item.resource || item,
+              (item: { resource: any }) => item.resource || item,
             );
           } else if (typeof maintenanceResponse.data === "object") {
             Object.keys(maintenanceResponse.data).forEach((key) => {
@@ -258,9 +258,9 @@ const VehicleAnalytics = () => {
 
   // Function to calculate analytics from raw data
   const calculateAnalyticsFromRawData = (
-    trips,
-    fuelRecords,
-    maintenanceRecords,
+    trips: any[],
+    fuelRecords: any[],
+    maintenanceRecords: any[],
   ) => {
     // Filter by date range
     const startDate = new Date(dateRange.startDate);
@@ -327,7 +327,7 @@ const VehicleAnalytics = () => {
     }
 
     // Generate cost by month
-    const costByMonth = [];
+    const costByMonth: { month: any; cost: any }[] = [];
     const monthMap = new Map();
 
     // Add fuel costs by month
@@ -380,7 +380,7 @@ const VehicleAnalytics = () => {
       .slice(0, 3); // Get top 3 upcoming
 
     // Calculate fuel efficiency trend
-    const fuelEfficiencyTrend = [];
+    const fuelEfficiencyTrend: { date: string; mpg: number }[] = [];
     if (fuelRecords.length >= 2) {
       // Group by month
       const efficiencyByMonth = new Map();
@@ -456,6 +456,7 @@ const VehicleAnalytics = () => {
         month: "short",
         day: "numeric",
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return "Invalid date";
     }

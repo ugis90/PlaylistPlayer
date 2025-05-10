@@ -6,7 +6,6 @@ import {
   Droplet,
   ChevronLeft,
   Search,
-  Filter,
   Plus,
   Edit,
   Trash2,
@@ -15,11 +14,10 @@ import {
   ArrowUpRight,
   RefreshCw,
   Loader,
-  Calendar,
   DollarSign,
   ChevronRight, // Added Calendar
 } from "lucide-react";
-import apiClient from "../api/client";
+import { apiClient } from "../api/client";
 import { FuelRecord, Vehicle } from "../types";
 import {
   useQuery,
@@ -145,11 +143,11 @@ const FuelRecords = () => {
     isFetching,
     refetch,
   } = useQuery<FuelQueryData, Error>({
+    initialData: undefined,
     queryKey: queryKey,
     queryFn: async (): Promise<FuelQueryData> => {
       if (!vehicleId) throw new Error("Vehicle ID is required");
       console.log(`Fetching fuel records page ${pagination.currentPage}...`);
-      // TODO: Add debouncedSearchTerm if backend supports it
       const url = `/vehicles/${vehicleId}/fuelRecords?pageNumber=${pagination.currentPage}&pageSize=${pagination.pageSize}`;
       const response = await apiClient.get<FuelApiResponse>(url);
 
@@ -256,8 +254,6 @@ const FuelRecords = () => {
         totalCost: data.totalCost,
         station: data.station,
         fullTank: data.fullTank,
-        // Include others ONLY if API supports it
-        // date: data.date, costPerGallon: data.costPerGallon, mileage: data.mileage
       };
       console.log(
         `API Request: PUT /vehicles/${vehicleId}/fuelRecords/${recordId}`,
@@ -479,6 +475,7 @@ const FuelRecords = () => {
         dateStyle: "medium",
         timeStyle: "short",
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return "Invalid date";
     }
@@ -488,11 +485,12 @@ const FuelRecords = () => {
     try {
       const date = new Date(dateString);
       return date.toISOString().slice(0, 16);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return "";
     }
   };
-  const calculateMpg = (currentRecord: FuelRecord, index: number): string => {
+  const calculateMpg = (currentRecord: FuelRecord): string => {
     // Find the correct previous record based on mileage sorting of the *current page data*
     const sortedRecords = [...records].sort((a, b) => a.mileage - b.mileage);
     const recordIndex = sortedRecords.findIndex(
@@ -510,7 +508,6 @@ const FuelRecords = () => {
     return (distance / currentRecord.gallons).toFixed(1);
   };
 
-  // Client-side filtering (REMOVE if backend handles search)
   const displayRecords = useMemo(() => {
     if (!debouncedSearchTerm) return records;
     return records.filter((record) =>
@@ -693,10 +690,13 @@ const FuelRecords = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {displayRecords
                   .sort(
-                    (a, b) =>
+                    (
+                      a: { date: string | number | Date },
+                      b: { date: string | number | Date },
+                    ) =>
                       new Date(b.date).getTime() - new Date(a.date).getTime(),
                   )
-                  .map((record, index) => (
+                  .map((record) => (
                     <tr key={record.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
@@ -741,7 +741,7 @@ const FuelRecords = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {calculateMpg(record, index)}
+                          {calculateMpg(record)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

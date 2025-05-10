@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { apiClient } from "../api/client";
 import { toast } from "sonner";
-import { Select } from "./ui/select"; // Import Select component
+import { Select } from "./ui/select";
 
 interface ApiError {
   errors?: Record<string, string[]>;
@@ -73,7 +73,11 @@ export function RegisterForm() {
           value={formData.userName}
           onChange={(e) => {
             setFormData({ ...formData, userName: e.target.value });
-            setApiErrors((prev) => ({ ...prev, UserName: undefined })); // Clear error on change
+            setApiErrors((prev) => {
+              const next = { ...prev };
+              delete next.UserName; // Delete the key
+              return next;
+            });
           }}
           placeholder="Choose a username"
           error={apiErrors.UserName?.[0]} // Display API error for username
@@ -86,7 +90,11 @@ export function RegisterForm() {
           value={formData.email}
           onChange={(e) => {
             setFormData({ ...formData, email: e.target.value });
-            setApiErrors((prev) => ({ ...prev, Email: undefined })); // Clear error on change
+            setApiErrors((prev) => {
+              const next = { ...prev };
+              delete next.UserName; // Delete the key
+              return next;
+            });
           }}
           placeholder="Your email address"
           error={apiErrors.Email?.[0]} // Display API error for email
@@ -99,7 +107,11 @@ export function RegisterForm() {
           value={formData.password}
           onChange={(e) => {
             setFormData({ ...formData, password: e.target.value });
-            setApiErrors((prev) => ({ ...prev, Password: undefined })); // Clear error on change
+            setApiErrors((prev) => {
+              const next = { ...prev };
+              delete next.UserName; // Delete the key
+              return next;
+            });
           }}
           placeholder="Choose a strong password"
           error={
@@ -120,7 +132,11 @@ export function RegisterForm() {
           value={role}
           onChange={(e) => {
             setRole(e.target.value);
-            setApiErrors((prev) => ({ ...prev, Role: undefined })); // Clear error on change
+            setApiErrors((prev) => {
+              const next = { ...prev };
+              delete next.UserName; // Delete the key
+              return next;
+            });
           }}
           error={apiErrors.Role?.[0]} // Display API error for role
         >

@@ -1,10 +1,9 @@
 ﻿// src/components/AdminDashboard.tsx
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Users,
-  Car,
   Map,
   UserCheck,
   UserX,
@@ -12,15 +11,10 @@ import {
   Search,
   Shield,
   RefreshCw,
-  ChevronRight,
-  Settings,
-  Droplet,
   Clock,
-  AlertTriangle,
   Filter,
   Loader,
   Compass,
-  Navigation,
   MapPin,
 } from "lucide-react";
 import apiClient from "../api/client";
@@ -63,7 +57,6 @@ const AdminDashboard = () => {
       navigate("/");
       return; // Prevent fetching if not admin
     }
-    // If userInfo is not yet available, PrivateRoute should handle redirection
     // Fetch data only if authenticated and potentially admin
     if (isAuthenticated && userInfo?.role === "ADMIN") {
       fetchUsersAndData();

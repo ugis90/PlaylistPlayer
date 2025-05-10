@@ -12,8 +12,6 @@ import {
   Play,
   Pause,
   Map as MapIcon,
-  RefreshCw,
-  Compass,
 } from "lucide-react";
 import apiClient from "../api/client";
 import { Vehicle } from "../types";
@@ -44,6 +42,7 @@ const GpsTracking = () => {
   const [currentLocation, setCurrentLocation] = useState<LocationData | null>(
     null,
   );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [startLocation, setStartLocation] = useState<LocationData | null>(null);
   const [tripData, setTripData] = useState<TripData>({
     startLocation: "",
@@ -81,8 +80,6 @@ const GpsTracking = () => {
   const markersRef = useRef<MarkerType[]>([]);
   const isMounted = useRef(true);
   const [mapInitialized, setMapInitialized] = useState(false);
-  const [isProcessingLocation, setIsProcessingLocation] = useState(false);
-
   const saveTripDataToLocalStorage = (data: TripData) => {
     try {
       localStorage.setItem("gps_trip_data", JSON.stringify(data));

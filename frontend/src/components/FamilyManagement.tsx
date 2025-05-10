@@ -6,7 +6,6 @@ import {
   Send,
   User,
   UserPlus,
-  ChevronRight,
   RefreshCw,
   Loader,
   MapPin,
@@ -113,7 +112,7 @@ export function FamilyManagement() {
       setEmail("");
       setRole("TEENAGER"); // Reset role
       setShowInviteForm(false);
-      fetchFamilyMembers(); // Refresh list
+      await fetchFamilyMembers(); // Refresh list
     } catch (error: any) {
       console.error("Error inviting user:", error);
       toast.error(

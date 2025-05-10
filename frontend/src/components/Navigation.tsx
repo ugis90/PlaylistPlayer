@@ -1,5 +1,5 @@
 ﻿// src/components/Navigation.tsx
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Menu,
@@ -7,14 +7,11 @@ import {
   Home,
   Car,
   Map as MapIcon,
-  User,
   LogOut,
-  Settings,
   Shield,
   Users,
   UserPlus,
   LogIn,
-  Wrench,
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 
@@ -62,26 +59,6 @@ const Navigation = () => {
       </Link>
     );
   };
-
-  const UserMenuLink = ({
-    to,
-    icon: Icon,
-    children,
-  }: {
-    to: string;
-    icon: React.ElementType;
-    children: React.ReactNode;
-  }) => (
-    <Link
-      to={to}
-      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-      onClick={closeUserMenu}
-    >
-      {" "}
-      <Icon className="h-4 w-4 mr-2" /> {children}{" "}
-    </Link>
-  );
-
   return (
     <nav className="bg-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
@@ -113,7 +90,6 @@ const Navigation = () => {
                 <NavLink to="/tracking" icon={MapIcon}>
                   GPS Tracking
                 </NavLink>
-                {/* *** FIX: Use Uppercase Role Names *** */}
                 {hasRole(["ADMIN", "PARENT"]) && (
                   <NavLink to="/family-tracking" icon={Users}>
                     Family Tracking
@@ -173,8 +149,6 @@ const Navigation = () => {
                       </div>
                     </div>
                     <div className="py-1" role="none">
-                      {/* <UserMenuLink to="/profile" icon={User}>Your Profile</UserMenuLink> */}
-                      {/* <UserMenuLink to="/settings" icon={Settings}>Settings</UserMenuLink> */}
                       <button
                         onClick={handleLogout}
                         className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
@@ -242,7 +216,6 @@ const Navigation = () => {
                 <NavLink to="/tracking" icon={MapIcon}>
                   GPS Tracking
                 </NavLink>
-                {/* *** FIX: Use Uppercase Role Names *** */}
                 {hasRole(["ADMIN", "PARENT"]) && (
                   <NavLink to="/family-tracking" icon={Users}>
                     Family Tracking

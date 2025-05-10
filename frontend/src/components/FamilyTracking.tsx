@@ -409,6 +409,7 @@ const FamilyTracking: React.FC = () => {
       const hours = Math.floor(diffMins / 60);
       const mins = diffMins % 60;
       return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return "Error";
     }

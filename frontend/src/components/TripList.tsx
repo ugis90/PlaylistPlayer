@@ -11,7 +11,6 @@ import {
   Edit,
   Trash2,
   ChevronLeft,
-  Filter,
   Search,
   Droplet,
   ChevronRight,
@@ -107,6 +106,7 @@ const TripList = () => {
       } else {
         toast.error("Could not load vehicle details.");
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast.error("Failed to load vehicle details");
     }
@@ -139,7 +139,7 @@ const TripList = () => {
   } = useQuery<TripQueryData, Error>({
     queryKey: queryKey,
     queryFn: async ({ queryKey }): Promise<TripQueryData> => {
-      // *** FIX: Destructure queryKey correctly, mark unused with _ ***
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [_key, vId, page, size, search] = queryKey as [
         string,
         string,
@@ -415,6 +415,7 @@ const TripList = () => {
         dateStyle: "medium",
         timeStyle: "short",
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return "Invalid date";
     }
@@ -430,6 +431,7 @@ const TripList = () => {
       const hours = Math.floor(diffMins / 60);
       const mins = diffMins % 60;
       return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return "Error";
     }
@@ -439,6 +441,7 @@ const TripList = () => {
     try {
       const date = new Date(dateString);
       return date.toISOString().slice(0, 16);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return "";
     }

@@ -2,11 +2,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 
-// --- Google Maps API Loading State ---
 let mapsApiLoaded = typeof window !== "undefined" && !!window.google?.maps;
-let mapsApiLoading = false;
 let mapsApiLoadPromise: Promise<boolean> | null = null;
-// --- End Google Maps API Loading State ---
 
 export function useGoogleMapsApi() {
   const [isLoaded, setIsLoaded] = useState<boolean>(mapsApiLoaded);
@@ -32,12 +29,9 @@ export function useGoogleMapsApi() {
       return Promise.resolve(true);
     }
 
-    mapsApiLoading = true; // Set loading flag
-
     mapsApiLoadPromise = new Promise((resolve, reject) => {
       if (!isMounted.current) {
         reject(new Error("Component unmounted before script could load"));
-        mapsApiLoading = false;
         mapsApiLoadPromise = null;
         return;
       }
@@ -53,7 +47,6 @@ export function useGoogleMapsApi() {
             clearInterval(checkInterval);
             console.log("useGoogleMapsApi: Existing script loaded.");
             mapsApiLoaded = true;
-            mapsApiLoading = false;
             if (isMounted.current) setIsLoaded(true);
             resolve(true);
             mapsApiLoadPromise = null;
@@ -69,7 +62,6 @@ export function useGoogleMapsApi() {
         toast.error("Map functionality requires an API key.");
         if (isMounted.current) setError("API Key Missing");
         reject(new Error("API Key Missing"));
-        mapsApiLoading = false;
         mapsApiLoadPromise = null;
         return;
       }
@@ -83,14 +75,12 @@ export function useGoogleMapsApi() {
       script.onload = () => {
         console.log("useGoogleMapsApi: Script loaded successfully via onload.");
         mapsApiLoaded = true;
-        mapsApiLoading = false;
         if (isMounted.current) setIsLoaded(true);
         resolve(true);
         mapsApiLoadPromise = null;
       };
       script.onerror = () => {
         console.error("useGoogleMapsApi: Failed to load script.");
-        mapsApiLoading = false;
         if (isMounted.current) {
           toast.error("Failed to load Google Maps.");
           setError("Script Load Failed");
