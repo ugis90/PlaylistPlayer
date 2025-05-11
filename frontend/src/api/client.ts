@@ -7,7 +7,7 @@ export const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true, // Important for cookies (like RefreshToken)
+  withCredentials: true,
 });
 
 let isRefreshing = false;
@@ -42,7 +42,6 @@ apiClient.interceptors.request.use(
   },
 );
 
-// Add response interceptor for handling 401, 422, and logging
 apiClient.interceptors.response.use(
   (response) => {
     console.log(
@@ -73,7 +72,6 @@ apiClient.interceptors.response.use(
     }
 
     // Handle 401 Unauthorized (Token Expired / Invalid)
-    // Ensure originalRequest exists and _retry flag is not set
     if (
       error.response?.status === 401 &&
       originalRequest &&
@@ -96,9 +94,8 @@ apiClient.interceptors.response.use(
 
       try {
         console.log("Attempting token refresh...");
-        // Call refresh token endpoint directly
-        const response = await apiClient.post("/accessToken"); // No need for full URL if baseURL is set
-        const { accessToken, userInfo } = response.data; // Expect userInfo here too
+        const response = await apiClient.post("/accessToken");
+        const { accessToken, userInfo } = response.data;
 
         if (!accessToken || !userInfo) {
           throw new Error("Invalid refresh token response from server.");
@@ -106,29 +103,24 @@ apiClient.interceptors.response.use(
 
         console.log("Token refreshed successfully.");
         localStorage.setItem("token", accessToken);
-        localStorage.setItem("userInfo", JSON.stringify(userInfo)); // Update user info
+        localStorage.setItem("userInfo", JSON.stringify(userInfo));
 
-        // Update the default header for subsequent requests
         apiClient.defaults.headers.common["Authorization"] =
           `Bearer ${accessToken}`;
 
-        // Update the header of the original failed request
         if (originalRequest.headers) {
           originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        onTokenRefreshed(accessToken); // Notify subscribers
+        onTokenRefreshed(accessToken);
         isRefreshing = false;
-        return apiClient(originalRequest); // Retry the original request
+        return apiClient(originalRequest);
       } catch (refreshError: any) {
         console.error("Token refresh failed:", refreshError);
         isRefreshing = false;
-        // If refresh fails, clear token, logout, and reject
         localStorage.removeItem("token");
         localStorage.removeItem("userInfo");
         delete apiClient.defaults.headers.common["Authorization"];
-        // Consider calling a logout function from AuthContext here if available
-        // Example: authContext.logout();
         toast.error("Session expired. Please log in again.");
         return Promise.reject(refreshError);
       }
@@ -141,34 +133,29 @@ apiClient.interceptors.response.use(
         "You don't have permission for this action.";
       console.error("Permission Denied (403):", errorDetail);
       toast.error(`Permission Denied: ${errorDetail}`);
-      // Don't automatically reject, let the component handle it if needed
+      // let the component handle
       // return Promise.reject(error); // Or let it fall through
     }
 
     // Handle 422 Unprocessable Entity (Validation Errors)
     if (error.response?.status === 422) {
-      const errorData = error.response.data as any; // Type assertion
+      const errorData = error.response.data as any;
       console.error("Validation Error (422):", errorData);
       if (errorData?.errors) {
-        // Extract and show the first validation error message
         const firstErrorKey = Object.keys(errorData.errors)[0];
         const firstErrorMessage =
           errorData.errors[firstErrorKey]?.[0] || "Validation failed.";
         toast.error(`Validation Error: ${firstErrorMessage}`);
-        // Reject with the structured validation errors for the component
         return Promise.reject({ status: 422, errors: errorData.errors });
       } else {
-        // Show generic 422 error if structure is unexpected
         toast.error(errorData?.detail || "Validation error occurred.");
       }
-      // Reject so the calling code knows it failed
       return Promise.reject(error);
     }
 
     // Handle other errors (404, 500, Network Error, etc.)
     let errorMessage = "An unexpected error occurred.";
     if (error.response) {
-      // Use detail or title if available, otherwise status text
       errorMessage =
         (error.response.data as any)?.detail ||
         (error.response.data as any)?.title ||
