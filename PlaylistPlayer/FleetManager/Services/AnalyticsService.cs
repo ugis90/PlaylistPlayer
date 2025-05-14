@@ -1,6 +1,5 @@
 ﻿// FleetManager/Services/AnalyticsService.cs
 using FleetManager.Data;
-using FleetManager.Data.DTOs;
 using FleetManager.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using System; // Add this for DateTimeOffset, Math, etc.
@@ -372,7 +371,7 @@ public class AnalyticsService(FleetDbContext dbContext)
         return totalGallons > 0 ? Math.Round(totalDistance / totalGallons, 1) : 0;
     }
 
-    private static List<UpcomingMaintenanceDto> PredictUpcomingMaintenance(
+    public static List<UpcomingMaintenanceDto> PredictUpcomingMaintenance(
         Vehicle vehicle,
         List<MaintenanceRecord> maintenanceHistory
     )
@@ -707,7 +706,7 @@ public class AnalyticsService(FleetDbContext dbContext)
         return totalGallons > 0 ? Math.Round(totalDistance / totalGallons, 1) : 0;
     }
 
-    private static List<CostByMonthDto> CalculateCostByMonth(
+    public static List<CostByMonthDto> CalculateCostByMonth(
         List<MaintenanceRecord> maintenanceRecords,
         List<FuelRecord> fuelRecords
     )

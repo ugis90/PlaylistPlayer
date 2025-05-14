@@ -1,7 +1,6 @@
 ﻿// FleetManager/Data/Entities/Trip.cs
 using System.ComponentModel.DataAnnotations;
 using FleetManager.Auth.Model;
-using FleetManager.Data.DTOs;
 using System.Collections.Generic; // Keep if other collections exist
 
 namespace FleetManager.Data.Entities;

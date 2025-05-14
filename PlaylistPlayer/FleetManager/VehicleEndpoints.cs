@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore; // Ensure this is included
 using Microsoft.IdentityModel.JsonWebTokens;
 using FleetManager.Auth.Model;
 using FleetManager.Data;
-using FleetManager.Data.DTOs;
 using FleetManager.Data.Entities;
 using FleetManager.Helpers;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;

@@ -1,7 +1,8 @@
 ﻿// FleetManager/Data/Entities/MaintenanceRecord.cs
 using System.ComponentModel.DataAnnotations;
 using FleetManager.Auth.Model;
-using FleetManager.Data.DTOs; // Assuming DTOs will be updated too
+
+// Assuming DTOs will be updated too
 
 namespace FleetManager.Data.Entities;
 
@@ -34,8 +35,15 @@ public class MaintenanceRecord
     public MaintenanceRecordDto ToDto()
     {
         return new MaintenanceRecordDto(
-            Id, ServiceType, Description, Cost, Mileage, Date,
-            Provider, NextServiceDue, CreatedAt,
+            Id,
+            ServiceType,
+            Description,
+            Cost,
+            Mileage,
+            Date,
+            Provider,
+            NextServiceDue,
+            CreatedAt,
             VehicleId // Pass VehicleId instead of TripId
         );
     }

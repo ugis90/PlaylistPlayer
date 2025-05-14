@@ -38,7 +38,17 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
-builder.Services.AddDbContext<FleetDbContext>();
+builder.Services.AddDbContext<FleetDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        throw new InvalidOperationException(
+            "PostgreSQL connection string is not configured in Program.cs."
+        );
+    }
+    options.UseNpgsql(connectionString);
+});
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddFluentValidationAutoValidation(
     configuration => configuration.OverrideDefaultResultFactoryWith<ProblemDetailsResultFactory>()
@@ -78,12 +88,18 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 app.UseCors();
-using var scope = app.Services.CreateScope();
+if (!app.Environment.IsEnvironment("Testing")) // "Testing" is what we set in CustomWebApplicationFactory
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<FleetDbContext>();
+    // Check if the provider is relational before attempting to migrate
+    if (dbContext.Database.IsRelational()) // Add this check
+    {
+        dbContext.Database.Migrate();
+    }
+}
 
-var dbContext = scope.ServiceProvider.GetRequiredService<FleetDbContext>();
-dbContext.Database.Migrate();
-
-var dbSeeder = scope.ServiceProvider.GetRequiredService<AuthSeeder>();
+var dbSeeder = app.Services.CreateScope().ServiceProvider.GetRequiredService<AuthSeeder>(); // Corrected scope usage
 await dbSeeder.SeedAsync();
 
 app.AddVehicleApi();
@@ -141,3 +157,5 @@ public class ProblemDetailsResultFactory : IFluentValidationAutoValidationResult
         return TypedResults.Problem(problemDetails);
     }
 }
+
+public partial class Program;

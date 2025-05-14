@@ -9,7 +9,6 @@ using FleetManager.Data;
 using FleetManager.Data.Entities;
 using FleetManager.Helpers;
 using System.Text.Json;
-using FleetManager.Data.DTOs;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
 using System.Collections.Generic; // Required for Dictionary
 

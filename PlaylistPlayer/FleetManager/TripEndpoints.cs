@@ -9,7 +9,6 @@ using FleetManager.Data;
 using FleetManager.Data.Entities;
 using FleetManager.Helpers;
 using System.Text.Json;
-using FleetManager.Data.DTOs;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
 using System.Collections.Generic; // Required for Dictionary
 
@@ -176,6 +175,15 @@ public static class TripEndpoints
                 ) =>
                 {
                     var userId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+                    Console.WriteLine($"--- Endpoint Hit ---");
+                    Console.WriteLine(
+                        $"User Authenticated: {httpContext.User.Identity?.IsAuthenticated}"
+                    );
+                    foreach (var claim in httpContext.User.Claims)
+                    {
+                        Console.WriteLine($"Claim: {claim.Type} = {claim.Value}");
+                    }
+                    Console.WriteLine($"User ID from Claim: {userId}");
                     if (string.IsNullOrEmpty(userId))
                         return Results.Unauthorized();
 

@@ -1,9 +1,8 @@
 ﻿// FleetManager/Data/DTOs.cs
-using FluentValidation;
-using System;
-using System.Collections.Generic;
 
-namespace FleetManager.Data.DTOs;
+using FluentValidation;
+
+namespace FleetManager.Data;
 
 // Vehicle DTOs
 public record VehicleDto(
@@ -66,7 +65,7 @@ public record CreateTripDto(
     DateTimeOffset EndTime,
     string? Purpose,
     double? FuelUsed
-); // Purpose nullable
+);
 
 public record UpdateTripDto(double? Distance, string? Purpose, double? FuelUsed);
 
@@ -81,7 +80,7 @@ public record MaintenanceRecordDto(
     string Provider,
     DateTimeOffset? NextServiceDue,
     DateTimeOffset CreatedAt,
-    int VehicleId // *** FIX: Changed from TripId ***
+    int VehicleId
 );
 
 public record CreateMaintenanceRecordDto(
@@ -94,7 +93,6 @@ public record CreateMaintenanceRecordDto(
     DateTimeOffset? NextServiceDue
 );
 
-// *** FIX: Make Update DTO fields nullable for PUT flexibility ***
 public record UpdateMaintenanceRecordDto(
     string? ServiceType,
     string? Description,
@@ -136,7 +134,6 @@ public record UpdateFuelRecordDto(
     bool? FullTank
 );
 
-// Analytics DTOs (Keep as they were)
 public record VehicleAnalyticsDto(
     decimal TotalCost,
     int Mileage,
@@ -196,7 +193,6 @@ public class CreateVehicleDtoValidator : AbstractValidator<CreateVehicleDto>
 
 public class UpdateVehicleDtoValidator : AbstractValidator<UpdateVehicleDto>
 {
-    // Allow partial updates, validate only if value is provided
     public UpdateVehicleDtoValidator()
     {
         RuleFor(x => x.Description)

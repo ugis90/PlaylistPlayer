@@ -1,7 +1,6 @@
 ﻿// FleetManager/Data/Entities/Vehicle.cs
 using System.ComponentModel.DataAnnotations;
 using FleetManager.Auth.Model;
-using FleetManager.Data.DTOs;
 using System.Collections.Generic; // Add this
 
 namespace FleetManager.Data.Entities;
