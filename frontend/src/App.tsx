@@ -1,4 +1,3 @@
-// src/App.tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { LoginForm } from "./components/LoginForm";
@@ -112,7 +111,6 @@ const router = createBrowserRouter([
     path: "/family-tracking",
     element: (
       <Layout>
-        {/* *** CONFIRM Uppercase Role Names *** */}
         <PrivateRoute roles={["ADMIN", "PARENT"]}>
           <FamilyTracking />
         </PrivateRoute>
@@ -123,7 +121,6 @@ const router = createBrowserRouter([
     path: "/family-management",
     element: (
       <Layout>
-        {/* *** CONFIRM Uppercase Role Names *** */}
         <PrivateRoute roles={["ADMIN", "PARENT"]}>
           <FamilyManagement />
         </PrivateRoute>
@@ -134,7 +131,6 @@ const router = createBrowserRouter([
     path: "/admin",
     element: (
       <Layout>
-        {/* *** CONFIRM Uppercase Role Name *** */}
         <PrivateRoute roles={["ADMIN"]}>
           <AdminDashboard />
         </PrivateRoute>

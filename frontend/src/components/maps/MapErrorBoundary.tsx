@@ -1,5 +1,4 @@
-﻿// src/components/maps/MapErrorBoundary.tsx
-import { Component, ErrorInfo, ReactNode } from "react";
+﻿import { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 
 interface Props {
@@ -31,7 +30,6 @@ class MapErrorBoundary extends Component<Props, State> {
 
   render(): ReactNode {
     if (this.state.hasError) {
-      // Fallback UI when error occurs
       return (
         this.props.fallback || (
           <div

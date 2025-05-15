@@ -19,10 +19,8 @@ public class LocationController(FleetDbContext dbContext) : ControllerBase
     {
         try
         {
-            // Get current user ID
             var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
-            // Create location record
             var location = new UserLocation
             {
                 UserId = userId,
@@ -51,10 +49,8 @@ public class LocationController(FleetDbContext dbContext) : ControllerBase
     {
         try
         {
-            // Get current user ID
             var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
-            // Get the most recent location for the current user
             var location = await dbContext.UserLocations
                 .Where(l => l.UserId == userId)
                 .OrderByDescending(l => l.Timestamp)
@@ -78,7 +74,6 @@ public class LocationController(FleetDbContext dbContext) : ControllerBase
     {
         try
         {
-            // Verify user has access to this vehicle
             var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
             var isAdmin = User.IsInRole(FleetRoles.Admin);
             var isParent = User.IsInRole(FleetRoles.Parent);
@@ -89,13 +84,11 @@ public class LocationController(FleetDbContext dbContext) : ControllerBase
                 return NotFound("Vehicle not found");
             }
 
-            // Check permissions - user is owner or admin/parent in same family
             if (vehicle.UserId != userId && !(isAdmin || isParent))
             {
                 return Forbid();
             }
 
-            // Get the most recent location for the vehicle
             var location = await dbContext.UserLocations
                 .Where(l => l.VehicleId == vehicleId)
                 .OrderByDescending(l => l.Timestamp)

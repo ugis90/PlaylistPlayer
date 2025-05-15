@@ -1,10 +1,7 @@
-﻿// This should be placed in a file named google-maps.d.ts in your src/types directory
-
-declare interface Window {
+﻿declare interface Window {
   google: typeof google;
 }
 
-// Basic Google Maps type declarations
 declare namespace google {
   namespace maps {
     class Map {

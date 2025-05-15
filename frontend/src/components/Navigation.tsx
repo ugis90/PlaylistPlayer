@@ -1,5 +1,4 @@
-﻿// src/components/Navigation.tsx
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Menu,
@@ -275,8 +274,6 @@ const Navigation = () => {
                 </div>
               </div>
               <div className="mt-3 space-y-1 px-2">
-                {/* <Link to="/profile" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 flex items-center" onClick={closeMenu}><User className="h-5 w-5 mr-2" /> Your Profile</Link> */}
-                {/* <Link to="/settings" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 flex items-center" onClick={closeMenu}><Settings className="h-5 w-5 mr-2" /> Settings</Link> */}
                 <button
                   onClick={handleLogout}
                   className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 flex items-center"

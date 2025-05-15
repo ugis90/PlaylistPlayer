@@ -1,5 +1,4 @@
-﻿// src/components/MaintenanceRecords.tsx
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -7,7 +6,6 @@ import {
   ChevronLeft,
   Search,
   Calendar,
-  DollarSign,
   Plus,
   Tag,
   Edit,
@@ -26,7 +24,6 @@ import {
   QueryKey,
 } from "@tanstack/react-query";
 
-// Define Pagination type
 interface PaginationInfo {
   currentPage: number;
   pageSize: number;
@@ -35,12 +32,10 @@ interface PaginationInfo {
   hasPrevious: boolean;
   hasNext: boolean;
 }
-// Define API response structure
 interface MaintenanceApiResponse {
   resource: Array<{ resource: MaintenanceRecord; links: any[] }>;
   links: any[];
 }
-// Define Query Data structure
 interface MaintenanceQueryData {
   records: MaintenanceRecord[];
   pagination: PaginationInfo;
@@ -51,13 +46,11 @@ interface UpdateMaintenanceRecordDto {
   description?: string | null;
   cost?: number | null;
   mileage?: number | null;
-  date?: string | null; // ISO string
+  date?: string | null;
   provider?: string | null;
-  nextServiceDue?: string | null; // ISO string or null
+  nextServiceDue?: string | null;
 }
 
-// @ts-ignore
-// @ts-ignore
 const MaintenanceRecords = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
@@ -69,7 +62,7 @@ const MaintenanceRecords = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const navigate = useNavigate();
-  const { vehicleId } = useParams<{ vehicleId: string }>(); // Only need vehicleId
+  const { vehicleId } = useParams<{ vehicleId: string }>();
   const queryClient = useQueryClient();
 
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -81,7 +74,6 @@ const MaintenanceRecords = () => {
     hasNext: false,
   });
 
-  // Debounce search term and reset page
   useEffect(() => {
     const handler = setTimeout(() => {
       if (debouncedSearchTerm !== searchTerm) {
@@ -121,7 +113,6 @@ const MaintenanceRecords = () => {
     }
   };
 
-  // --- Data Fetching with React Query ---
   const queryKey = useMemo(
     () =>
       [
@@ -195,7 +186,7 @@ const MaintenanceRecords = () => {
       return { records: validRecords, pagination: paginationInfo };
     },
     enabled: !!vehicleId,
-    staleTime: 1 * 60 * 1000,
+    staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
     keepPreviousData: true,
   });
@@ -230,6 +221,14 @@ const MaintenanceRecords = () => {
       }
     },
   });
+
+  const formatCurrency = (value: number | undefined | null) => {
+    if (value === undefined || value === null || isNaN(value)) return "€0.00";
+    return new Intl.NumberFormat("lt-LT", {
+      style: "currency",
+      currency: "EUR",
+    }).format(value);
+  };
 
   const updateRecordMutation = useMutation({
     mutationFn: async ({
@@ -285,7 +284,6 @@ const MaintenanceRecords = () => {
     },
   });
 
-  // --- Event Handlers & Helpers ---
   const handlePageChange = (newPage: number) => {
     if (
       newPage >= 1 &&
@@ -376,7 +374,6 @@ const MaintenanceRecords = () => {
       toast.error("Please fix form errors");
       return;
     }
-    // Create the DTO for update (all fields optional)
     const recordData: UpdateMaintenanceRecordDto = {
       serviceType: formData.get("serviceType") as string,
       description: formData.get("description") as string,
@@ -388,8 +385,6 @@ const MaintenanceRecords = () => {
         ? new Date(formData.get("nextServiceDue") as string).toISOString()
         : null,
     };
-    // Filter out null/undefined values if backend expects only changed fields (optional)
-    // const filteredData = Object.fromEntries(Object.entries(recordData).filter(([_, v]) => v != null));
     updateRecordMutation.mutate({ recordId, data: recordData });
   };
 
@@ -409,10 +404,8 @@ const MaintenanceRecords = () => {
     }
   };
 
-  // *** FIX: Navigate back to vehicle list ***
   const goBack = () => navigate(`/vehicles`);
 
-  // Formatting functions
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "N/A";
     try {
@@ -459,21 +452,10 @@ const MaintenanceRecords = () => {
       return false;
     }
   };
-  const safeToFixed = (
-    value: number | undefined | null,
-    decimals: number = 2,
-  ) => {
-    if (value === undefined || value === null || isNaN(value)) return "0.00";
-    return value.toFixed(decimals);
-  };
-
-  // Client-side filtering (REMOVE if backend handles search)
   const displayRecords = useMemo(() => {
     if (!debouncedSearchTerm) return records;
     return records.filter(
-      (
-        record: MaintenanceRecord, // Add explicit type
-      ) =>
+      (record: MaintenanceRecord) =>
         (record.serviceType?.toLowerCase() || "").includes(
           debouncedSearchTerm.toLowerCase(),
         ) ||
@@ -493,7 +475,6 @@ const MaintenanceRecords = () => {
         onClick={goBack}
         className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
       >
-        {/* *** FIX: Update back button text *** */}
         <ChevronLeft className="h-5 w-5 mr-1" /> Back to Vehicles
       </button>
 
@@ -540,7 +521,7 @@ const MaintenanceRecords = () => {
             </div>
             <input
               type="text"
-              placeholder="Search maintenance (client-side)..."
+              placeholder="Search maintenance..."
               className="pl-10 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -584,88 +565,83 @@ const MaintenanceRecords = () => {
           <div
             className={`divide-y divide-gray-200 ${isFetching ? "opacity-75" : ""}`}
           >
-            {displayRecords.map(
-              (
-                record: MaintenanceRecord, // Add explicit type
-              ) => (
-                <div key={record.id} className="p-6 hover:bg-gray-50">
-                  <div className="flex flex-col md:flex-row justify-between">
-                    {/* Record Details */}
-                    <div className="flex-grow">
-                      <div className="flex items-start mb-2">
-                        <Wrench className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0 mt-1" />
-                        <div>
-                          <h3 className="font-medium text-lg">
-                            {record.serviceType || "N/A"}
-                          </h3>
-                          <p className="text-gray-600">
-                            {record.description || "N/A"}
-                          </p>
-                        </div>
+            {displayRecords.map((record: MaintenanceRecord) => (
+              <div key={record.id} className="p-6 hover:bg-gray-50">
+                <div className="flex flex-col md:flex-row justify-between">
+                  {/* Record Details */}
+                  <div className="flex-grow">
+                    <div className="flex items-start mb-2">
+                      <Wrench className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0 mt-1" />
+                      <div>
+                        <h3 className="font-medium text-lg">
+                          {record.serviceType || "N/A"}
+                        </h3>
+                        <p className="text-gray-600">
+                          {record.description || "N/A"}
+                        </p>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 text-sm">
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                          <span className="text-gray-700">
-                            {formatDate(record.date)}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <DollarSign className="h-4 w-4 mr-2 text-gray-500" />
-                          <span className="text-gray-700">
-                            ${safeToFixed(record.cost)}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <Tag className="h-4 w-4 mr-2 text-gray-500" />
-                          <span className="text-gray-700">
-                            {record.provider || "N/A"}
-                          </span>
-                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 text-sm">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                        <span className="text-gray-700">
+                          {formatDate(record.date)}
+                        </span>
                       </div>
-                      {record.nextServiceDue && (
-                        <div
-                          className={`mt-4 flex items-center p-2 rounded-md text-xs ${isServiceOverdue(record.nextServiceDue) ? "bg-red-100 text-red-800" : isServiceDueSoon(record.nextServiceDue) ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}
-                        >
-                          <AlertTriangle
-                            className={`h-4 w-4 mr-2 ${isServiceOverdue(record.nextServiceDue) ? "text-red-600" : isServiceDueSoon(record.nextServiceDue) ? "text-yellow-600" : "text-green-600"}`}
-                          />
-                          <span>
-                            {isServiceOverdue(record.nextServiceDue)
-                              ? `Overdue! Was due ${formatDate(record.nextServiceDue)}`
-                              : isServiceDueSoon(record.nextServiceDue)
-                                ? `Due soon: ${formatDate(record.nextServiceDue)}`
-                                : `Next due: ${formatDate(record.nextServiceDue)}`}
-                          </span>
-                        </div>
-                      )}
+                      <div className="flex items-center">
+                        <span className="text-gray-700">
+                          {formatCurrency(record.cost)}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <Tag className="h-4 w-4 mr-2 text-gray-500" />
+                        <span className="text-gray-700">
+                          {record.provider || "N/A"}
+                        </span>
+                      </div>
                     </div>
-                    {/* Action Buttons */}
-                    <div className="flex space-x-2 mt-4 md:mt-0 md:ml-6 flex-shrink-0 self-start md:self-center">
-                      <button
-                        onClick={() => {
-                          setCurrentRecord(record);
-                          setFormErrors({});
-                          setIsModalOpen(true);
-                        }}
-                        className="text-indigo-600 hover:text-indigo-800 p-1"
-                        title="Edit"
+                    {record.nextServiceDue && (
+                      <div
+                        className={`mt-4 flex items-center p-2 rounded-md text-xs ${isServiceOverdue(record.nextServiceDue) ? "bg-red-100 text-red-800" : isServiceDueSoon(record.nextServiceDue) ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}
                       >
-                        <Edit className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteRecord(record.id)}
-                        className="text-red-600 hover:text-red-800 p-1"
-                        title="Delete"
-                        disabled={deleteRecordMutation.isPending}
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-                    </div>
+                        <AlertTriangle
+                          className={`h-4 w-4 mr-2 ${isServiceOverdue(record.nextServiceDue) ? "text-red-600" : isServiceDueSoon(record.nextServiceDue) ? "text-yellow-600" : "text-green-600"}`}
+                        />
+                        <span>
+                          {isServiceOverdue(record.nextServiceDue)
+                            ? `Overdue! Was due ${formatDate(record.nextServiceDue)}`
+                            : isServiceDueSoon(record.nextServiceDue)
+                              ? `Due soon: ${formatDate(record.nextServiceDue)}`
+                              : `Next due: ${formatDate(record.nextServiceDue)}`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Action Buttons */}
+                  <div className="flex space-x-2 mt-4 md:mt-0 md:ml-6 flex-shrink-0 self-start md:self-center">
+                    <button
+                      onClick={() => {
+                        setCurrentRecord(record);
+                        setFormErrors({});
+                        setIsModalOpen(true);
+                      }}
+                      className="text-indigo-600 hover:text-indigo-800 p-1"
+                      title="Edit"
+                    >
+                      <Edit className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteRecord(record.id)}
+                      className="text-red-600 hover:text-red-800 p-1"
+                      title="Delete"
+                      disabled={deleteRecordMutation.isPending}
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
-              ),
-            )}
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -1,5 +1,4 @@
-﻿// src/components/AdminDashboard.tsx
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -21,13 +20,11 @@ import apiClient from "../api/client";
 import { Vehicle, Trip } from "../types";
 import { useAuth } from "../auth/AuthContext";
 
-// Define a type for the raw user data from the API
-// This acknowledges that 'roles' might come as a single string or an array
 interface RawApiUser {
   id: string;
   userName: string;
   email: string;
-  roles: string | string[] | null | undefined; // More flexible for incoming data
+  roles: string | string[] | null | undefined;
   lastLocation?: {
     latitude: number;
     longitude: number;
@@ -43,7 +40,7 @@ interface UserData {
   id: string;
   userName: string;
   email: string;
-  roles: string[]; // Client-side, roles will always be string[]
+  roles: string[];
   lastLocation?: {
     latitude: number;
     longitude: number;
@@ -53,7 +50,7 @@ interface UserData {
   };
   vehicles?: Vehicle[];
   activeTrips?: Trip[];
-  lastSeen?: string; // Derived client-side
+  lastSeen?: string;
 }
 
 const AdminDashboard = () => {
@@ -95,13 +92,11 @@ const AdminDashboard = () => {
     setApiError(null);
     try {
       console.log("Fetching users from /api/users...");
-      // Use RawApiUser for the expected response type from the API
       const usersResponse = await apiClient.get<RawApiUser[]>("/users");
       console.log("Users response data:", usersResponse.data);
 
       let fetchedUsers: UserData[] = [];
       if (Array.isArray(usersResponse.data)) {
-        // Map RawApiUser to UserData, ensuring transformations are clear
         fetchedUsers = usersResponse.data.map(
           (rawUser: RawApiUser): UserData => {
             let processedRoles: string[];
@@ -113,19 +108,16 @@ const AdminDashboard = () => {
             ) {
               processedRoles = [rawUser.roles];
             } else {
-              // Handles null, undefined, or empty string for roles by defaulting to an empty array
               processedRoles = [];
             }
 
             return {
-              // Spread properties that are the same
               id: rawUser.id,
               userName: rawUser.userName,
               email: rawUser.email,
               lastLocation: rawUser.lastLocation,
               vehicles: rawUser.vehicles,
               activeTrips: rawUser.activeTrips,
-              // Apply transformations
               roles: processedRoles,
               lastSeen: rawUser.lastLocation?.timestamp
                 ? new Date(rawUser.lastLocation.timestamp).toLocaleString()
@@ -139,7 +131,6 @@ const AdminDashboard = () => {
           "Unexpected data format from /api/users. Expected an array:",
           usersResponse.data,
         );
-        // Ensure users is an empty array if data format is wrong
         fetchedUsers = [];
       }
 
@@ -148,11 +139,9 @@ const AdminDashboard = () => {
         setLastRefreshed(new Date());
       }
     } catch (error: unknown) {
-      // Changed from 'any' to 'unknown'
       console.error("Error fetching admin dashboard data:", error);
       let errorMsg = "Failed to load admin data";
 
-      // Type guard for Axios-like errors (adjust if your apiClient has a different error structure)
       if (
         typeof error === "object" &&
         error !== null &&
@@ -177,7 +166,7 @@ const AdminDashboard = () => {
       if (isMounted.current) {
         toast.error(errorMsg);
         setApiError(errorMsg);
-        setUsers([]); // Clear users on error
+        setUsers([]);
       }
     } finally {
       if (isMounted.current) setIsLoading(false);
@@ -193,8 +182,7 @@ const AdminDashboard = () => {
     const lastSeenDate = new Date(user.lastLocation.timestamp);
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     return (
-      lastSeenDate > fiveMinutesAgo ||
-      (user.lastLocation.speed ?? 0) * 2.237 > 7
+      lastSeenDate > fiveMinutesAgo || (user.lastLocation.speed ?? 0) * 3.6 > 11
     );
   };
 
@@ -269,7 +257,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Stats overview - Simplified */}
+      {/* Stats overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-4">
@@ -330,13 +318,10 @@ const AdminDashboard = () => {
                         <p className="text-sm text-gray-600">{user.email}</p>
                       </div>
                     </div>
-                    {/* Consider changing pl-13 to a standard Tailwind value like pl-12 if it's a typo */}
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 mt-1 pl-12 md:pl-13">
                       {" "}
-                      {/* Adjusted pl-13, check if it's intended or pl-12 */}
                       <span className="inline-flex items-center bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs font-medium">
                         {user.roles.join(", ") || "No Role"}{" "}
-                        {/* user.roles is now guaranteed string[] */}
                       </span>
                       <div
                         className={`flex items-center ${isActive(user) ? "text-green-600" : "text-gray-500"}`}
@@ -370,10 +355,8 @@ const AdminDashboard = () => {
                 </div>
                 {/* Location data snippet */}
                 {user.lastLocation && (
-                  // Consider changing pl-13 to a standard Tailwind value like pl-12 if it's a typo
                   <div className="mt-3 pl-12 md:pl-13 pt-2 border-t border-gray-100">
                     {" "}
-                    {/* Adjusted pl-13 */}
                     <div className="flex items-center text-xs text-gray-500">
                       <MapPin className="h-3 w-3 mr-1 text-red-500" />
                       {user.lastLocation.latitude.toFixed(4)},{" "}
@@ -383,9 +366,9 @@ const AdminDashboard = () => {
                           <span className="ml-3 inline-flex items-center">
                             <Compass className="h-3 w-3 mr-0.5" />
                             {Math.round(
-                              (user.lastLocation.speed ?? 0) * 2.237,
+                              (user.lastLocation.speed ?? 0) * 3.6,
                             )}{" "}
-                            mph
+                            km/h
                           </span>
                         )}
                     </div>
@@ -395,22 +378,6 @@ const AdminDashboard = () => {
             ))}
           </div>
         )}
-      </div>
-
-      {/* Other Admin Sections (Placeholder) */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">System Settings</h2>
-          <p className="text-gray-600 text-sm">
-            Placeholder for global application settings.
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">Audit Log</h2>
-          <p className="text-gray-600 text-sm">
-            Placeholder for viewing admin actions.
-          </p>
-        </div>
       </div>
     </div>
   );

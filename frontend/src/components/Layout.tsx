@@ -1,6 +1,4 @@
-﻿// src/components/Layout.tsx - Standardized light mode
-
-import React, { ReactNode } from "react";
+﻿import React, { ReactNode } from "react";
 import Navigation from "./Navigation";
 
 interface LayoutProps {

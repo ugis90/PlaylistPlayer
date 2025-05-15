@@ -1,19 +1,13 @@
-﻿// FleetManager/Data/FleetDbContext.cs
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using FleetManager.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using FleetManager.Auth.Model;
 
-// using Microsoft.Extensions.Configuration; // No longer directly needed here
-
 namespace FleetManager.Data;
 
-public class FleetDbContext : IdentityDbContext<FleetUser>
+public class FleetDbContext(DbContextOptions<FleetDbContext> options)
+    : IdentityDbContext<FleetUser>(options)
 {
-    // Primary constructor for DI and tests
-    public FleetDbContext(DbContextOptions<FleetDbContext> options)
-        : base(options) { }
-
     public DbSet<Vehicle> Vehicles { get; set; }
     public DbSet<Trip> Trips { get; set; }
     public DbSet<MaintenanceRecord> MaintenanceRecords { get; set; }
@@ -25,14 +19,12 @@ public class FleetDbContext : IdentityDbContext<FleetUser>
     {
         base.OnModelCreating(builder);
 
-        // Vehicle to Trips relationship
         builder
             .Entity<Vehicle>()
             .HasMany(v => v.Trips)
             .WithOne(t => t.Vehicle)
             .HasForeignKey(t => t.VehicleId);
 
-        // Vehicle to FuelRecords relationship
         builder
             .Entity<Vehicle>()
             .HasMany(v => v.FuelRecords)
@@ -48,7 +40,7 @@ public class FleetDbContext : IdentityDbContext<FleetUser>
         builder
             .Entity<MaintenanceRecord>()
             .HasOne(m => m.User)
-            .WithMany() // User can have many maintenance records they logged
+            .WithMany()
             .HasForeignKey(m => m.UserId);
 
         builder.Entity<UserLocation>(entity =>

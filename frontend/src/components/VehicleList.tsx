@@ -1,5 +1,4 @@
-﻿// src/components/VehicleList.tsx
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -61,7 +60,6 @@ const VehicleList = () => {
     hasNext: false,
   });
 
-  // Debounce search term and reset page
   useEffect(() => {
     const handler = setTimeout(() => {
       if (debouncedSearchTerm !== searchTerm) {
@@ -73,7 +71,6 @@ const VehicleList = () => {
     return () => clearTimeout(handler);
   }, [searchTerm, debouncedSearchTerm]);
 
-  // --- Data Fetching with React Query ---
   const queryKey = useMemo(
     () =>
       [
@@ -86,10 +83,10 @@ const VehicleList = () => {
   );
 
   const {
-    data: queryResult, // This object will contain { vehicles: [], pagination: {} } upon success
-    isLoading, // Use isLoading for the initial fetch state
+    data: queryResult,
+    isLoading,
     error,
-    isFetching, // Use isFetching for background refetches/pagination fetches
+    isFetching,
     refetch,
   } = useQuery<VehicleQueryResponseData, Error>({
     queryKey: queryKey,
@@ -146,7 +143,6 @@ const VehicleList = () => {
       console.log("Parsed vehicles:", validVehicles);
       console.log("Fetched Pagination Info:", fetchedPaginationInfo);
 
-      // Update local pagination state *after* fetch is successful
       setPagination(fetchedPaginationInfo);
 
       return { vehicles: validVehicles, pagination: fetchedPaginationInfo };
@@ -156,10 +152,8 @@ const VehicleList = () => {
   });
 
   const vehicles = queryResult?.vehicles ?? [];
-  // Use the local pagination state for UI controls and display text
   const currentPagination = pagination;
 
-  // --- Mutations ---
   const createVehicleMutation = useMutation({
     mutationFn: async (vehicleData: Omit<Vehicle, "id">) =>
       apiClient.post("/vehicles", vehicleData),
@@ -249,7 +243,6 @@ const VehicleList = () => {
     },
   });
 
-  // --- Event Handlers ---
   const handlePageChange = (newPage: number) => {
     if (
       newPage >= 1 &&
@@ -350,7 +343,6 @@ const VehicleList = () => {
     }
   };
 
-  // Navigation functions
   const navigateToTrips = (vehicleId: number) =>
     navigate(`/vehicles/${vehicleId}/trips`);
   const navigateToFuelRecords = (vehicleId: number) =>
@@ -358,13 +350,10 @@ const VehicleList = () => {
   const navigateToMaintenance = (vehicleId: number) =>
     navigate(`/vehicles/${vehicleId}/maintenance`);
 
-  // Client-side filtering (REMOVE if backend handles search)
   const displayVehicles = useMemo(() => {
     if (!debouncedSearchTerm) return vehicles;
     return vehicles.filter(
-      (
-        vehicle: Vehicle, // Add explicit type
-      ) =>
+      (vehicle: Vehicle) =>
         vehicle.make
           ?.toLowerCase()
           .includes(debouncedSearchTerm.toLowerCase()) ||
@@ -380,7 +369,6 @@ const VehicleList = () => {
     );
   }, [vehicles, debouncedSearchTerm]);
 
-  // Permissions
   const canManageVehicles = hasRole([
     "Admin",
     "Parent",
@@ -389,8 +377,7 @@ const VehicleList = () => {
   ]);
   const canEditDelete = hasRole(["Admin", "Parent"]);
 
-  // *** FIX: Use isLoading for initial load check ***
-  const showLoading = isLoading && !queryResult; // Show loader only on initial load without data
+  const showLoading = isLoading && !queryResult;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -441,7 +428,6 @@ const VehicleList = () => {
         </div>
 
         {/* Vehicle List Table */}
-        {/* *** FIX: Use isLoading for initial load check *** */}
         {showLoading ? (
           <div className="p-8 text-center">
             <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
@@ -452,8 +438,7 @@ const VehicleList = () => {
             {" "}
             Error loading vehicles: {error.message}{" "}
           </div>
-        ) : // *** FIX: Check vehicles length from queryResult for initial empty state ***
-        queryResult?.vehicles.length === 0 && !debouncedSearchTerm ? (
+        ) : queryResult?.vehicles.length === 0 && !debouncedSearchTerm ? (
           <div className="p-8 text-center">
             <p className="text-gray-500 mb-4">
               No vehicles found. Add a vehicle to get started.
@@ -470,8 +455,7 @@ const VehicleList = () => {
               </button>
             )}
           </div>
-        ) : // *** FIX: Use displayVehicles for search empty state ***
-        displayVehicles.length === 0 && debouncedSearchTerm ? (
+        ) : displayVehicles.length === 0 && debouncedSearchTerm ? (
           <div className="p-8 text-center text-gray-500">
             {" "}
             No vehicles match your search term "{debouncedSearchTerm}".{" "}
@@ -501,95 +485,90 @@ const VehicleList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {/* *** FIX: Map over displayVehicles *** */}
-                {displayVehicles.map(
-                  (
-                    vehicle: Vehicle, // Add explicit type
-                  ) => (
-                    <tr key={vehicle.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Car className="h-6 w-6 text-blue-600" />
+                {displayVehicles.map((vehicle: Vehicle) => (
+                  <tr key={vehicle.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <Car className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {vehicle.make} {vehicle.model}
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {vehicle.make} {vehicle.model}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {vehicle.year}
-                            </div>
+                          <div className="text-sm text-gray-500">
+                            {vehicle.year}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {vehicle.licensePlate}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {vehicle.currentMileage?.toLocaleString() || 0} miles
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div
-                          className="text-sm text-gray-900 max-w-xs truncate"
-                          title={vehicle.description}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {vehicle.licensePlate}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {vehicle.currentMileage?.toLocaleString() || 0} km
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div
+                        className="text-sm text-gray-900 max-w-xs truncate"
+                        title={vehicle.description}
+                      >
+                        {vehicle.description || "No description"}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => navigateToTrips(vehicle.id)}
+                          className="text-blue-600 hover:text-blue-900 p-1"
+                          title="View Trips"
                         >
-                          {vehicle.description || "No description"}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-1">
-                          <button
-                            onClick={() => navigateToTrips(vehicle.id)}
-                            className="text-blue-600 hover:text-blue-900 p-1"
-                            title="View Trips"
-                          >
-                            <FileText className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => navigateToFuelRecords(vehicle.id)}
-                            className="text-green-600 hover:text-green-900 p-1"
-                            title="View Fuel Records"
-                          >
-                            <Droplet className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => navigateToMaintenance(vehicle.id)}
-                            className="text-orange-600 hover:text-orange-900 p-1"
-                            title="View Maintenance"
-                          >
-                            <Wrench className="h-5 w-5" />
-                          </button>
-                          {canEditDelete && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setCurrentVehicle(vehicle);
-                                  setIsModalOpen(true);
-                                }}
-                                className="text-indigo-600 hover:text-indigo-900 p-1"
-                                title="Edit"
-                              >
-                                <Edit className="h-5 w-5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteVehicle(vehicle.id)}
-                                className="text-red-600 hover:text-red-900 p-1"
-                                title="Delete"
-                                disabled={deleteVehicleMutation.isPending}
-                              >
-                                <Trash2 className="h-5 w-5" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ),
-                )}
+                          <FileText className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => navigateToFuelRecords(vehicle.id)}
+                          className="text-green-600 hover:text-green-900 p-1"
+                          title="View Fuel Records"
+                        >
+                          <Droplet className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => navigateToMaintenance(vehicle.id)}
+                          className="text-orange-600 hover:text-orange-900 p-1"
+                          title="View Maintenance"
+                        >
+                          <Wrench className="h-5 w-5" />
+                        </button>
+                        {canEditDelete && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setCurrentVehicle(vehicle);
+                                setIsModalOpen(true);
+                              }}
+                              className="text-indigo-600 hover:text-indigo-900 p-1"
+                              title="Edit"
+                            >
+                              <Edit className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteVehicle(vehicle.id)}
+                              className="text-red-600 hover:text-red-900 p-1"
+                              title="Delete"
+                              disabled={deleteVehicleMutation.isPending}
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

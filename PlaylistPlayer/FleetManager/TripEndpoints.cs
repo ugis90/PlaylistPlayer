@@ -1,5 +1,4 @@
-﻿// FleetManager/TripEndpoints.cs
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +9,6 @@ using FleetManager.Data.Entities;
 using FleetManager.Helpers;
 using System.Text.Json;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
-using System.Collections.Generic; // Required for Dictionary
 
 namespace FleetManager;
 
@@ -37,7 +35,7 @@ public static class TripEndpoints
                     var userId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    var isTeenager = httpContext.User.IsInRole(FleetRoles.Teenager);
+                    var isYoungDriver = httpContext.User.IsInRole(FleetRoles.YoungDriver);
 
                     var vehicle = await dbContext.Vehicles
                         .Include(v => v.User)
@@ -50,7 +48,7 @@ public static class TripEndpoints
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isOwner = vehicle.UserId == userId;
                     var isFamilyMember =
-                        (isParent || isTeenager)
+                        (isParent || isYoungDriver)
                         && vehicle.User != null
                         && vehicle.User.FamilyGroupId == familyGroupId;
 
@@ -132,7 +130,7 @@ public static class TripEndpoints
                     var userId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    var isTeenager = httpContext.User.IsInRole(FleetRoles.Teenager);
+                    var isYoungDriver = httpContext.User.IsInRole(FleetRoles.YoungDriver);
 
                     var trip = await dbContext.Trips
                         .Include(t => t.Vehicle)
@@ -147,7 +145,7 @@ public static class TripEndpoints
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isVehicleOwner = trip.Vehicle.UserId == userId;
                     var isFamilyMember =
-                        (isParent || isTeenager)
+                        (isParent || isYoungDriver)
                         && trip.Vehicle.User != null
                         && trip.Vehicle.User.FamilyGroupId == familyGroupId;
 
@@ -164,7 +162,7 @@ public static class TripEndpoints
             .MapPost(
                 "/",
                 [Authorize(
-                    Roles = $"{FleetRoles.Admin},{FleetRoles.Parent},{FleetRoles.FleetUser},{FleetRoles.Teenager}"
+                    Roles = $"{FleetRoles.Admin},{FleetRoles.Parent},{FleetRoles.FleetUser},{FleetRoles.YoungDriver}"
                 )]
                 async (
                     [FromRoute] int vehicleId,
@@ -189,7 +187,7 @@ public static class TripEndpoints
 
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    var isTeenager = httpContext.User.IsInRole(FleetRoles.Teenager);
+                    var isYoungDriver = httpContext.User.IsInRole(FleetRoles.YoungDriver);
 
                     var vehicle = await dbContext.Vehicles
                         .Include(v => v.User)
@@ -201,14 +199,25 @@ public static class TripEndpoints
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isOwner = vehicle.UserId == userId;
                     var isFamilyMember =
-                        (isParent || isTeenager)
+                        (isParent || isYoungDriver)
                         && vehicle.User != null
                         && vehicle.User.FamilyGroupId == familyGroupId;
 
                     if (!isAdmin && !isOwner && !isFamilyMember)
+                    {
+                        Console.WriteLine(
+                            $"FORBIDDEN: isAdmin={isAdmin}, isOwner={isOwner}, isFamilyMember={isFamilyMember}"
+                        );
+                        Console.WriteLine(
+                            $"   userIdFromClaims: {userId}, vehicle.UserId: {vehicle.UserId}"
+                        );
+                        Console.WriteLine($"   isParent: {isParent}, isTeenager: {isYoungDriver}");
+                        Console.WriteLine(
+                            $"   vehicle.User.FamilyGroupId: {vehicle.User?.FamilyGroupId}, familyGroupIdFromClaimsUser: {familyGroupId}"
+                        );
                         return Results.Forbid();
+                    }
 
-                    // Basic validation for DTO values
                     if (dto.Distance < 0)
                         return Results.ValidationProblem(
                             new Dictionary<string, string[]>
@@ -245,12 +254,23 @@ public static class TripEndpoints
                         UserId = userId
                     };
 
-                    var newMileage = vehicle.CurrentMileage + (int)dto.Distance;
+                    var newMileage = vehicle.CurrentMileage + (int)Math.Round(dto.Distance); // Use Math.Round before casting for consistency
                     if (newMileage > vehicle.CurrentMileage)
+                    {
                         vehicle.CurrentMileage = newMileage;
-
+                        dbContext.Entry(vehicle).State = EntityState.Modified;
+                        Console.WriteLine(
+                            $"ENDPOINT_DEBUG: Vehicle {vehicle.Id} mileage set to {vehicle.CurrentMileage}. EntityState: {dbContext.Entry(vehicle).State}"
+                        );
+                    }
                     dbContext.Trips.Add(trip);
+                    Console.WriteLine(
+                        $"ENDPOINT_DEBUG: Saving changes. Trip ID (before save): {trip.Id}"
+                    );
                     await dbContext.SaveChangesAsync();
+                    Console.WriteLine(
+                        $"ENDPOINT_DEBUG: SaveChangesAsync complete. Trip ID (after save): {trip.Id}"
+                    );
 
                     var links = CreateLinksForSingleTrip(
                             vehicleId,
@@ -311,10 +331,8 @@ public static class TripEndpoints
                     if (!isAdmin && !isTripCreator && !isParentInFamily)
                         return Results.Forbid();
 
-                    // --- Start Filled-in Update Logic ---
-                    decimal originalDistance = (decimal)trip.Distance; // Store original distance for mileage calc
+                    decimal originalDistance = (decimal)trip.Distance;
 
-                    // Update Distance if provided and valid
                     if (dto.Distance.HasValue)
                     {
                         if (dto.Distance.Value < 0)
@@ -327,13 +345,11 @@ public static class TripEndpoints
                         trip.Distance = dto.Distance.Value;
                     }
 
-                    // Update Purpose if provided (allow empty string)
                     if (dto.Purpose != null)
                     {
                         trip.Purpose = dto.Purpose;
                     }
 
-                    // Update FuelUsed if provided and valid
                     if (dto.FuelUsed.HasValue)
                     {
                         if (dto.FuelUsed.Value < 0)
@@ -347,19 +363,15 @@ public static class TripEndpoints
                     }
                     else
                     {
-                        // If explicitly set to null in DTO (or not provided), set to null in entity
                         trip.FuelUsed = null;
                     }
 
-                    // Adjust vehicle mileage if distance changed
                     if (dto.Distance.HasValue && (decimal)trip.Distance != originalDistance)
                     {
                         var mileageDifference = (int)trip.Distance - (int)originalDistance;
                         var newVehicleMileage = trip.Vehicle.CurrentMileage + mileageDifference;
-                        trip.Vehicle.CurrentMileage = Math.Max(0, newVehicleMileage); // Prevent negative mileage
-                        // EF Core tracks this change on the related Vehicle entity
+                        trip.Vehicle.CurrentMileage = Math.Max(0, newVehicleMileage);
                     }
-                    // --- End Filled-in Update Logic ---
 
                     await dbContext.SaveChangesAsync();
                     return TypedResults.Ok(trip.ToDto());
@@ -416,7 +428,6 @@ public static class TripEndpoints
             .WithName("DeleteTrip");
     }
 
-    // --- Helper Methods for Links ---
     private static IEnumerable<LinkDto> CreateLinksForSingleTrip(
         int vehicleId,
         int tripId,

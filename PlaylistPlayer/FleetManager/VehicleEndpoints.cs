@@ -1,9 +1,8 @@
-﻿// FleetManager/VehicleEndpoints.cs
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore; // Ensure this is included
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 using FleetManager.Auth.Model;
 using FleetManager.Data;
@@ -26,7 +25,7 @@ public static class VehicleEndpoints
                 [Authorize]
                 async (
                     [AsParameters] SearchParameters searchParams,
-                    [FromQuery] string? searchTerm, // <-- Add searchTerm parameter
+                    [FromQuery] string? searchTerm,
                     LinkGenerator linkGenerator,
                     HttpContext httpContext,
                     FleetDbContext dbContext
@@ -35,17 +34,16 @@ public static class VehicleEndpoints
                     var userId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    var isTeenager = httpContext.User.IsInRole(FleetRoles.Teenager);
+                    var isYoungDriver = httpContext.User.IsInRole(FleetRoles.YoungDriver);
 
                     var currentUser = await dbContext.Users.FindAsync(userId);
                     var familyGroupId = currentUser?.FamilyGroupId;
 
                     var queryable = dbContext.Vehicles.Include(v => v.User).AsQueryable();
 
-                    // Apply Role Filtering
                     if (!isAdmin)
                     {
-                        if (isParent || isTeenager)
+                        if (isParent || isYoungDriver)
                         {
                             queryable = queryable.Where(
                                 v =>
@@ -59,7 +57,6 @@ public static class VehicleEndpoints
                         }
                     }
 
-                    // --- Apply Search Term Filtering ---
                     if (!string.IsNullOrWhiteSpace(searchTerm))
                     {
                         var term = searchTerm.Trim().ToLower();
@@ -72,20 +69,18 @@ public static class VehicleEndpoints
                                     && v.LicensePlate.ToLower().Contains(term)
                                 )
                                 || (v.Description != null && v.Description.ToLower().Contains(term))
-                                || (v.Year.ToString().Contains(term)) // Search year as string
+                                || (v.Year.ToString().Contains(term))
                         );
                     }
-                    // --- End Search Term Filtering ---
 
-                    queryable = queryable.OrderBy(v => v.CreatedAt); // Apply ordering *after* filtering
+                    queryable = queryable.OrderBy(v => v.CreatedAt);
 
                     var pagedList = await PagedList<Vehicle>.CreateAsync(
-                        queryable, // Pass the filtered queryable
+                        queryable,
                         searchParams.PageNumber!.Value,
                         searchParams.PageSize!.Value
                     );
 
-                    // ... rest of the mapping, pagination header, and return logic ...
                     var resources = pagedList
                         .Select(vehicle =>
                         {
@@ -131,36 +126,35 @@ public static class VehicleEndpoints
             )
             .WithName("GetVehicles");
 
-        // GET /vehicles/{vehicleId} (Authorization logic seems okay)
+        // GET /vehicles/{vehicleId}
         vehiclesGroup
             .MapGet(
                 "/vehicles/{vehicleId}",
-                [Authorize] // Ensure authorized
+                [Authorize]
                 async (int vehicleId, HttpContext httpContext, FleetDbContext dbContext) =>
                 {
                     var userId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    var isTeenager = httpContext.User.IsInRole(FleetRoles.Teenager); // Check Teenager
+                    var isYoungDriver = httpContext.User.IsInRole(FleetRoles.YoungDriver);
 
                     var vehicle = await dbContext.Vehicles
-                        .Include(v => v.User) // Include User to check FamilyGroupId
+                        .Include(v => v.User)
                         .FirstOrDefaultAsync(v => v.Id == vehicleId);
 
                     if (vehicle == null)
                         return Results.NotFound("Vehicle not found");
 
-                    // Check permissions
                     var currentUser = await dbContext.Users.FindAsync(userId);
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isOwner = vehicle.UserId == userId;
                     var isFamilyMember =
-                        (isParent || isTeenager) // Parent or Teenager
+                        (isParent || isYoungDriver)
                         && vehicle.User != null
-                        && vehicle.User.FamilyGroupId == familyGroupId; // In the same family
+                        && vehicle.User.FamilyGroupId == familyGroupId;
 
                     if (!isAdmin && !isOwner && !isFamilyMember)
-                        return Results.Forbid(); // Use Forbid for permissions issue
+                        return Results.Forbid();
 
                     return Results.Ok(vehicle.ToDto());
                 }
@@ -168,12 +162,12 @@ public static class VehicleEndpoints
             .WithName("GetVehicle")
             .AddEndpointFilter<ETagFilter>();
 
-        // POST /vehicles (Allow Admin, Parent, FleetUser, and Teenager)
+        // POST /vehicles
         vehiclesGroup
             .MapPost(
                 "/vehicles",
                 [Authorize(
-                    Roles = $"{FleetRoles.Admin},{FleetRoles.Parent},{FleetRoles.FleetUser},{FleetRoles.Teenager}"
+                    Roles = $"{FleetRoles.Admin},{FleetRoles.Parent},{FleetRoles.FleetUser},{FleetRoles.YoungDriver}"
                 )]
                 async (
                     CreateVehicleDto dto,
@@ -185,19 +179,18 @@ public static class VehicleEndpoints
                     var userId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
                     Console.WriteLine(
                         $"--- POST /vehicles Check --- User: {userId}, Role Claim: {httpContext.User.FindFirstValue(ClaimTypes.Role)}"
-                    ); // Log role claim from token
+                    );
                     if (string.IsNullOrEmpty(userId))
                     {
-                        return Results.Unauthorized(); // Should not happen if [Authorize] works
+                        return Results.Unauthorized();
                     }
 
-                    // Fetch the user to potentially assign FamilyGroupId if needed later
                     var user = await dbContext.Users.FindAsync(userId);
                     if (user == null)
                     {
-                        return Results.Unauthorized(); // User must exist
+                        return Results.Unauthorized();
                     }
-                    Console.WriteLine($"--- POST /vehicles Passed Initial Checks ---"); // Add this log
+                    Console.WriteLine($"--- POST /vehicles Passed Initial Checks ---");
 
                     var vehicle = new Vehicle
                     {
@@ -208,8 +201,7 @@ public static class VehicleEndpoints
                         Description = dto.Description,
                         CurrentMileage = dto.CurrentMileage ?? 0,
                         CreatedAt = DateTimeOffset.UtcNow,
-                        UserId = userId // Assign to the user creating it
-                        // FamilyGroupId is implicitly linked via the User relationship
+                        UserId = userId
                     };
 
                     dbContext.Vehicles.Add(vehicle);
@@ -232,13 +224,13 @@ public static class VehicleEndpoints
             )
             .WithName("CreateVehicle");
 
-        // PUT /vehicles/{vehicleId} (Allow Admin, Parent, or Owner)
+        // PUT /vehicles/{vehicleId}
         vehiclesGroup
             .MapPut(
                 "/vehicles/{vehicleId}",
-                [Authorize] // General authorization needed
+                [Authorize]
                 async (
-                    UpdateVehicleDto dto, // Use a specific DTO for updates
+                    UpdateVehicleDto dto,
                     int vehicleId,
                     HttpContext httpContext,
                     FleetDbContext dbContext
@@ -249,15 +241,13 @@ public static class VehicleEndpoints
                     );
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    // Teenagers generally shouldn't update family vehicles unless it's their own
 
                     var vehicle = await dbContext.Vehicles
-                        .Include(v => v.User) // Include User for permission check
+                        .Include(v => v.User)
                         .FirstOrDefaultAsync(v => v.Id == vehicleId);
                     if (vehicle == null)
                         return Results.NotFound("Vehicle not found");
 
-                    // Check permissions: Admin, Owner, or Parent in the same family group
                     var currentUser = await dbContext.Users.FindAsync(currentUserId);
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isOwner = vehicle.UserId == currentUserId;
@@ -271,8 +261,6 @@ public static class VehicleEndpoints
                         return Results.Forbid();
                     }
 
-                    // Update fields from DTO
-                    // Note: UpdateVehicleDto needs to include all fields if you want them editable here
                     if (!string.IsNullOrEmpty(dto.Make))
                         vehicle.Make = dto.Make;
                     if (!string.IsNullOrEmpty(dto.Model))
@@ -306,11 +294,11 @@ public static class VehicleEndpoints
             )
             .WithName("UpdateVehicle");
 
-        // DELETE /vehicles/{vehicleId} (Allow Admin, Parent, or Owner)
+        // DELETE /vehicles/{vehicleId}
         vehiclesGroup
             .MapDelete(
                 "/vehicles/{vehicleId}",
-                [Authorize] // General authorization needed
+                [Authorize]
                 async (int vehicleId, HttpContext httpContext, FleetDbContext dbContext) =>
                 {
                     var currentUserId = httpContext.User.FindFirstValue(
@@ -318,17 +306,15 @@ public static class VehicleEndpoints
                     );
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    // Teenagers generally shouldn't delete family vehicles unless it's their own
 
                     var vehicle = await dbContext.Vehicles
-                        .Include(v => v.User) // Include User for permission check
+                        .Include(v => v.User)
                         .FirstOrDefaultAsync(v => v.Id == vehicleId);
                     if (vehicle == null)
                     {
                         return Results.NotFound();
                     }
 
-                    // Check permissions: Admin, Owner, or Parent in the same family group
                     var currentUser = await dbContext.Users.FindAsync(currentUserId);
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isOwner = vehicle.UserId == currentUserId;
@@ -349,12 +335,7 @@ public static class VehicleEndpoints
                 }
             )
             .WithName("RemoveVehicle");
-
-        // Removed the duplicate location update endpoint here.
-        // It should be handled by LocationController.
     }
-
-    // --- Helper methods for links ---
 
     private static IEnumerable<LinkDto> CreateLinksForSingleVehicle(
         int vehicleId,
@@ -374,24 +355,21 @@ public static class VehicleEndpoints
         );
         yield return new LinkDto(
             linkGenerator.GetUriByName(httpContext, "RemoveVehicle", new { vehicleId }),
-            "remove", // Changed from "delete" to "remove" to match endpoint name
+            "remove",
             "DELETE"
         );
-        // Link to trips for this vehicle
         yield return new LinkDto(
-            linkGenerator.GetUriByName(httpContext, "GetTrips", new { vehicleId }), // Assumes GetTrips endpoint exists and is named
+            linkGenerator.GetUriByName(httpContext, "GetTrips", new { vehicleId }),
             "trips",
             "GET"
         );
-        // Add links to fuel records, maintenance (if applicable at vehicle level)
         yield return new LinkDto(
-            linkGenerator.GetUriByName(httpContext, "GetFuelRecords", new { vehicleId }), // Assumes GetFuelRecords endpoint exists
+            linkGenerator.GetUriByName(httpContext, "GetFuelRecords", new { vehicleId }),
             "fuelRecords",
             "GET"
         );
-        // Link to analytics for this vehicle
         yield return new LinkDto(
-            linkGenerator.GetUriByName(httpContext, "GetVehicleAnalytics", new { vehicleId }), // Assumes GetVehicleAnalytics endpoint exists
+            linkGenerator.GetUriByName(httpContext, "GetVehicleAnalytics", new { vehicleId }),
             "analytics",
             "GET"
         );
@@ -405,18 +383,11 @@ public static class VehicleEndpoints
     )
     {
         yield return new LinkDto(
-            linkGenerator.GetUriByName(
-                httpContext,
-                "GetVehicles", // Use the correct endpoint name
-                new
-                { /* Add current query params if needed, e.g., pageNumber, pageSize */
-                }
-            ),
+            linkGenerator.GetUriByName(httpContext, "GetVehicles", new { }),
             "self",
             "GET"
         );
 
-        // Link to create vehicle
         yield return new LinkDto(
             linkGenerator.GetUriByName(httpContext, "CreateVehicle"),
             "create",
@@ -430,6 +401,3 @@ public static class VehicleEndpoints
             yield return new LinkDto(nextPageLink, "nextPage", "GET");
     }
 }
-
-// Removed the LocationData class definition from here.
-// Use the UserLocation entity defined elsewhere (e.g., in Data/Entities).

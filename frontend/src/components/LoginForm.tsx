@@ -1,5 +1,4 @@
-﻿// src/components/LoginForm.tsx
-import { useAuth } from "../auth/AuthContext";
+﻿import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Input } from "./ui/input";
@@ -17,7 +16,7 @@ export function LoginForm() {
 
     try {
       await login(formData.userName, formData.password);
-      navigate("/"); // Navigate to dashboard on successful login
+      navigate("/");
     } catch (err: any) {
       console.error("Login component caught error:", err);
     } finally {

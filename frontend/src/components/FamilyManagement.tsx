@@ -1,5 +1,4 @@
-﻿// src/components/FamilyManagement.tsx
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
   Plus,
@@ -13,7 +12,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 
 interface FamilyMember {
   id: string;
@@ -32,37 +31,35 @@ interface FamilyMember {
 export function FamilyManagement() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [apiError, setApiError] = useState<string | null>(null); // State for API errors
+  const [apiError, setApiError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("TEENAGER"); // Use uppercase default
+  const [role, setRole] = useState("YOUNGDRIVER");
   const [isInviting, setIsInviting] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const { userInfo, hasRole } = useAuth(); // Get hasRole
+  const { userInfo, hasRole } = useAuth();
   const isMounted = useRef(true);
-  const navigate = useNavigate(); // Initialize navigate
+  const navigate = useNavigate();
 
-  // Check permissions on mount and when userInfo changes
   useEffect(() => {
     isMounted.current = true;
     const canAccess = hasRole(["ADMIN", "PARENT"]);
     if (!canAccess && userInfo) {
-      // Check only if userInfo is loaded
       toast.error("Access Denied: You need Admin or Parent permissions.");
       navigate("/");
     } else if (canAccess) {
-      fetchFamilyMembers(); // Fetch only if user has access
+      fetchFamilyMembers();
     } else {
-      setIsLoading(false); // Stop loading if access check is pending userInfo
+      setIsLoading(false);
     }
     return () => {
       isMounted.current = false;
     };
-  }, [userInfo, hasRole, navigate]); // Add dependencies
+  }, [userInfo, hasRole, navigate]);
 
   const fetchFamilyMembers = async () => {
     if (!isMounted.current) return;
     setIsLoading(true);
-    setApiError(null); // Clear previous errors
+    setApiError(null);
     try {
       console.log("Fetching family members from /api/users...");
       const response = await apiClient.get<FamilyMember[]>("/users");
@@ -90,7 +87,7 @@ export function FamilyManagement() {
       const errorMsg = error.response?.data || "Failed to load family members";
       if (isMounted.current) {
         toast.error(errorMsg);
-        setApiError(errorMsg); // Set API error state
+        setApiError(errorMsg);
         setMembers([]);
       }
     } finally {
@@ -107,12 +104,12 @@ export function FamilyManagement() {
     setIsInviting(true);
 
     try {
-      await apiClient.post("/users/invite", { email, role }); // Role should be uppercase from select value
+      await apiClient.post("/users/invite", { email, role });
       toast.success(`Invitation sent to ${email}`);
       setEmail("");
-      setRole("TEENAGER"); // Reset role
+      setRole("YOUNGDRIVER");
       setShowInviteForm(false);
-      await fetchFamilyMembers(); // Refresh list
+      await fetchFamilyMembers();
     } catch (error: any) {
       console.error("Error inviting user:", error);
       toast.error(
@@ -125,7 +122,6 @@ export function FamilyManagement() {
     }
   };
 
-  // Render loading or error state first
   if (isLoading) {
     return (
       <div className="p-6 text-center">
@@ -200,11 +196,8 @@ export function FamilyManagement() {
                 onChange={(e) => setRole(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded bg-white focus:ring-blue-500 focus:border-blue-500"
               >
-                {/* Use Uppercase values */}
-                <option value="TEENAGER">Child/Teenager</option>
-                <option value="FLEETUSER">Regular User</option>
+                <option value="YOUNGDRIVER">Young Driver</option>
                 <option value="PARENT">Parent</option>
-                {/* <option value="ADMIN">Admin</option> */}
               </select>
             </div>
           </div>
@@ -265,7 +258,7 @@ export function FamilyManagement() {
                         key={role}
                         className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium"
                       >
-                        {role} {/* Display role as fetched */}
+                        {role}
                       </span>
                     ))}
                   </div>
@@ -284,9 +277,9 @@ export function FamilyManagement() {
                           <span className="ml-2 inline-flex items-center">
                             <Compass className="h-3 w-3 mr-0.5" />
                             {Math.round(
-                              (member.lastLocation.speed ?? 0) * 2.237,
+                              (member.lastLocation.speed ?? 0) * 3.6,
                             )}{" "}
-                            mph
+                            km/h
                           </span>
                         )}
                       <span className="ml-2">
@@ -299,8 +292,6 @@ export function FamilyManagement() {
                     </span>
                   </div>
                 )}
-                {/* Add actions if needed, e.g., remove member, change role */}
-                {/* <button className="text-blue-600 hover:text-blue-800 flex items-center text-sm"> Manage <ChevronRight className="h-4 w-4" /> </button> */}
               </div>
             </div>
           ))}

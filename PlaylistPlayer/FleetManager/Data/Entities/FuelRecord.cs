@@ -7,8 +7,8 @@ public class FuelRecord
 {
     public int Id { get; set; }
     public required DateTimeOffset Date { get; set; }
-    public required double Gallons { get; set; }
-    public required decimal CostPerGallon { get; set; }
+    public required double Liters { get; set; }
+    public required decimal CostPerLiter { get; set; }
     public required decimal TotalCost { get; set; }
     public required int Mileage { get; set; }
     public string Station { get; set; } = string.Empty;
@@ -20,15 +20,15 @@ public class FuelRecord
 
     [Required]
     public required string UserId { get; set; }
-    public FleetUser User { get; set; }
+    public FleetUser User { get; set; } = null!;
 
     public FuelRecordDto ToDto()
     {
         return new FuelRecordDto(
             Id,
             Date,
-            Gallons,
-            CostPerGallon,
+            Liters,
+            CostPerLiter,
             TotalCost,
             Mileage,
             Station,

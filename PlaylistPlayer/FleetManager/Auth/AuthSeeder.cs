@@ -1,9 +1,5 @@
-﻿// FleetManager/Auth/AuthSeeder.cs
-using FleetManager.Auth.Model;
+﻿using FleetManager.Auth.Model;
 using Microsoft.AspNetCore.Identity;
-using System.Threading.Tasks;
-using System.Linq; // Add Linq
-using System; // Add Console
 
 namespace FleetManager.Auth;
 
@@ -29,7 +25,6 @@ public class AuthSeeder(UserManager<FleetUser> userManager, RoleManager<Identity
             if (createAdminUserResult.Succeeded)
             {
                 Console.WriteLine("Admin user created successfully.");
-                // Add all roles (ensure they exist first from AddDefaultRolesAsync)
                 var addRolesResult = await userManager.AddToRolesAsync(
                     newAdminUser,
                     FleetRoles.All
@@ -50,11 +45,10 @@ public class AuthSeeder(UserManager<FleetUser> userManager, RoleManager<Identity
         else
         {
             Console.WriteLine("Admin user already exists.");
-            // Ensure existing admin has all roles
             var currentRoles = await userManager.GetRolesAsync(existingAdminUser);
             var rolesToAdd = FleetRoles.All
                 .Except(currentRoles.Select(r => r.ToUpperInvariant()))
-                .ToArray(); // Compare uppercase
+                .ToArray();
             if (rolesToAdd.Length > 0)
             {
                 var addRolesResult = await userManager.AddToRolesAsync(
@@ -72,18 +66,16 @@ public class AuthSeeder(UserManager<FleetUser> userManager, RoleManager<Identity
 
     private async Task AddDefaultRolesAsync()
     {
-        foreach (string roleNameUpper in FleetRoles.All) // Constants are already uppercase
+        foreach (string roleNameUpper in FleetRoles.All)
         {
             var roleExists = await roleManager.RoleExistsAsync(roleNameUpper);
             if (!roleExists)
             {
                 Console.WriteLine($"Creating role: {roleNameUpper}");
-                // Create with uppercase name, Identity handles normalization
                 await roleManager.CreateAsync(new IdentityRole(roleNameUpper));
             }
             else
             {
-                // *** FIX: Ensure existing role name and normalized name are uppercase ***
                 var role = await roleManager.FindByNameAsync(roleNameUpper);
                 if (
                     role == null
@@ -92,7 +84,7 @@ public class AuthSeeder(UserManager<FleetUser> userManager, RoleManager<Identity
                     continue;
                 Console.WriteLine($"Correcting case for role: {role.Name} -> {roleNameUpper}");
                 role.Name = roleNameUpper;
-                role.NormalizedName = roleNameUpper; // Explicitly set normalized name
+                role.NormalizedName = roleNameUpper;
                 await roleManager.UpdateAsync(role);
             }
         }

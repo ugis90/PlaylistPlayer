@@ -1,5 +1,4 @@
-﻿// src/components/maps/GoogleMapsWrapper.tsx
-import React, { useRef, useEffect, useState } from "react";
+﻿import React, { useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface GoogleMapsWrapperProps {
@@ -20,7 +19,6 @@ declare global {
   }
 }
 
-// Safe wrapper component for Google Maps that isolates it from React's rendering cycle
 const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
   onMapLoaded,
   width = "100%",
@@ -36,7 +34,6 @@ const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
   const onMapLoadedCalled = useRef(false);
   const mapInitialized = useRef(false);
 
-  // Function to safely check if Google Maps API is fully loaded
   const isGoogleMapsFullyLoaded = (): boolean => {
     return !!(
       window.google?.maps?.Map &&
@@ -46,21 +43,17 @@ const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
     );
   };
 
-  // Load Google Maps API if not already loaded
   useEffect(() => {
-    // Skip if already loaded
     if (isGoogleMapsFullyLoaded()) {
       setIsLoading(false);
       return;
     }
 
-    // Check for existing script
     const existingScript = document.querySelector(
       'script[src*="maps.googleapis.com/maps/api/js"]',
     );
 
     if (existingScript) {
-      // Script exists, wait for it to load
       const checkInterval = setInterval(() => {
         if (isGoogleMapsFullyLoaded()) {
           clearInterval(checkInterval);
@@ -68,7 +61,6 @@ const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
         }
       }, 100);
 
-      // Set a timeout to avoid infinite checking
       setTimeout(() => {
         clearInterval(checkInterval);
         if (!isGoogleMapsFullyLoaded()) {
@@ -80,7 +72,6 @@ const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
         clearInterval(checkInterval);
       };
     } else {
-      // Need to load the script
       const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
       if (!apiKey) {
         setError("Google Maps API key is missing");
@@ -94,7 +85,6 @@ const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
       script.defer = true;
 
       script.onload = () => {
-        // Introduce a small delay to ensure the API is fully initialized
         setTimeout(() => {
           if (isGoogleMapsFullyLoaded()) {
             setIsLoading(false);
@@ -102,7 +92,6 @@ const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
             console.warn(
               "Google Maps API loaded but objects not available yet",
             );
-            // Try again after a short delay
             setTimeout(() => {
               if (isGoogleMapsFullyLoaded()) {
                 setIsLoading(false);
@@ -121,22 +110,17 @@ const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
 
       document.head.appendChild(script);
 
-      return () => {
-        // Don't remove the script on unmount as other components might use it
-      };
+      return () => {};
     }
   }, []);
 
-  // Initialize map after API is loaded
   useEffect(() => {
     if (isLoading || error || !containerRef.current) return;
     if (mapInitialized.current) return;
 
-    // Set initialization flag to prevent multiple initializations
     mapInitialized.current = true;
     onMapLoadedCalled.current = false;
 
-    // Small delay to ensure API is fully loaded
     const initTimeoutId = setTimeout(() => {
       try {
         if (!isGoogleMapsFullyLoaded()) {
@@ -148,12 +132,10 @@ const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
           return;
         }
 
-        // Create a new div element that's completely isolated from React
         const mapContainer = document.createElement("div");
         mapContainer.style.width = "100%";
         mapContainer.style.height = "100%";
 
-        // First clear any existing content to avoid React conflicts
         if (containerRef.current) {
           while (containerRef.current.firstChild) {
             containerRef.current.removeChild(containerRef.current.firstChild);
@@ -163,17 +145,15 @@ const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
 
         const defaultOptions = {
           zoom: 10,
-          center: { lat: 40.7128, lng: -74.006 }, // Default to NYC
+          center: { lat: 40.7128, lng: -74.006 },
           mapTypeControl: true,
           zoomControl: true,
           streetViewControl: false,
         };
 
-        // Explicitly type window.google to avoid TS errors
         const googleMaps = window.google!.maps;
         const combinedOptions = { ...defaultOptions, ...mapOptions };
 
-        // Make sure mapTypeId is explicitly set to avoid undefined error
         if (!combinedOptions.mapTypeId && googleMaps.MapTypeId) {
           combinedOptions.mapTypeId = googleMaps.MapTypeId.ROADMAP;
         }
@@ -185,9 +165,7 @@ const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
 
         mapRef.current = map;
 
-        // Small delay before notifying parent to ensure map is fully initialized
         setTimeout(() => {
-          // Notify parent component that map is ready
           if (onMapLoaded && map && !onMapLoadedCalled.current) {
             onMapLoadedCalled.current = true;
             onMapLoaded(map);
@@ -206,20 +184,15 @@ const GoogleMapsWrapper: React.FC<GoogleMapsWrapperProps> = ({
     };
   }, [isLoading, error, mapOptions, onMapLoaded]);
 
-  // Cleanup when component unmounts
   useEffect(() => {
     return () => {
-      // When component unmounts, explicitly clean up all Google Maps objects
       if (mapRef.current && window.google?.maps?.event) {
         try {
-          // Try to clean up any listeners
           (window.google.maps.event as any).clearInstanceListeners(
             mapRef.current,
           );
 
-          // Explicitly clear the map's DOM (this is crucial)
           if (containerRef.current) {
-            // Detach the map container from our ref container
             while (containerRef.current.firstChild) {
               containerRef.current.removeChild(containerRef.current.firstChild);
             }

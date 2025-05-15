@@ -1,7 +1,4 @@
-﻿// src/services/LocationService.ts
-// Replace the implementation with this corrected version
-
-import { toast } from "sonner";
+﻿import { toast } from "sonner";
 import apiClient from "../api/client";
 
 export interface LocationData {
@@ -27,21 +24,17 @@ class LocationService {
   private locationHistory: LocationData[] = [];
   private isRecordingHistory: boolean = false;
 
-  // Keys for storage
   private readonly TRACKING_KEY = "fleet_tracking_enabled";
   private readonly USER_LOCATION_KEY = "fleet_user_location";
 
   private constructor() {
-    // Initialize by loading from storage
     this.loadFromStorage();
 
-    // Check if tracking was previously enabled
     const trackingEnabled = localStorage.getItem(this.TRACKING_KEY) === "true";
     if (trackingEnabled) {
       this.startTracking();
     }
 
-    // Check if mock mode was set (for testing when real GPS isn't available)
     this.mockMode = localStorage.getItem("fleet_mock_location_mode") === "true";
   }
 
@@ -66,7 +59,7 @@ class LocationService {
   }
 
   public getLocationHistory(): LocationData[] {
-    return [...this.locationHistory]; // Return a copy
+    return [...this.locationHistory];
   }
 
   public isHistoryRecordingActive(): boolean {
@@ -75,7 +68,6 @@ class LocationService {
 
   public addLocationToHistory(location: LocationData): void {
     if (this.isRecordingHistory) {
-      // Deep copy to avoid reference issues
       const locationCopy = JSON.parse(JSON.stringify(location));
       this.locationHistory.push(locationCopy);
       console.log(
@@ -111,10 +103,8 @@ class LocationService {
     this.isTracking = true;
     localStorage.setItem(this.TRACKING_KEY, "true");
 
-    // Get location immediately
     this.updateCurrentLocation();
 
-    // Set interval for continuous updates
     this.trackingInterval = window.setInterval(() => {
       this.updateCurrentLocation();
     }, intervalMs);
@@ -139,13 +129,11 @@ class LocationService {
   }
 
   private updateCurrentLocation(): void {
-    // If in mock mode, use mock location
     if (this.mockMode) {
       this.updateMockCurrentLocation();
       return;
     }
 
-    // Check if browser supports geolocation
     if (!navigator.geolocation) {
       console.error("Geolocation is not supported by this browser");
       toast.error("Your browser doesn't support location services");
@@ -174,16 +162,12 @@ class LocationService {
           timestamp: new Date().toISOString(),
         };
 
-        // Update cache
         this.locationCache.set(currentUserId, locationData);
 
-        // Save to storage
         this.saveToStorage();
 
-        // Upload to server - using the real API endpoint
         this.uploadLocationToServer(locationData);
 
-        // Notify listeners
         this.notifyListeners();
 
         if (this.isRecordingHistory) {
@@ -193,14 +177,12 @@ class LocationService {
       (error) => {
         console.error("Error getting location:", error);
 
-        // If the error is permission denied, stop tracking
         if (error.code === error.PERMISSION_DENIED) {
           toast.error(
             "Location permission denied. Please enable location services.",
           );
           this.stopTracking();
 
-          // Switch to mock mode for testing if we can't get real locations
           this.setMockMode(true);
         }
       },
@@ -223,14 +205,12 @@ class LocationService {
       return;
     }
 
-    // Generate a location near New York City (or use last location as base if exists)
     const lastLocation = this.locationCache.get(currentUserId);
 
-    let latitude = 40.7128; // NYC default
+    let latitude = 40.7128;
     let longitude = -74.006;
 
     if (lastLocation) {
-      // Simulate movement by adding small random changes to location
       latitude = lastLocation.latitude + (Math.random() - 0.5) * 0.001;
       longitude = lastLocation.longitude + (Math.random() - 0.5) * 0.001;
     }
@@ -240,22 +220,18 @@ class LocationService {
       vehicleId: currentVehicleId,
       latitude,
       longitude,
-      speed: 15 + Math.random() * 30, // Random speed between 15-45 mph
-      heading: Math.random() * 360, // Random heading
+      speed: 5 + Math.random() * 30,
+      heading: Math.random() * 360,
       accuracy: 10,
       timestamp: new Date().toISOString(),
     };
 
-    // Update cache
     this.locationCache.set(currentUserId, locationData);
 
-    // Save to storage
     this.saveToStorage();
 
-    // In mock mode, still try to upload to server if available
     this.uploadLocationToServer(locationData);
 
-    // Notify listeners
     this.notifyListeners();
 
     if (this.isRecordingHistory) {
@@ -267,7 +243,6 @@ class LocationService {
     locationData: LocationData,
   ): Promise<void> {
     try {
-      // Use the real API endpoint for location updates
       await apiClient.post("/locations", locationData);
       console.log("Location uploaded successfully");
     } catch (error) {
@@ -291,8 +266,7 @@ class LocationService {
     const vehicleId = localStorage.getItem("currentVehicleId");
 
     if (!vehicleId) {
-      // If no vehicle is selected, try to get the first vehicle from cache
-      return 1; // Default to ID 1 for demo purposes
+      return 1;
     }
 
     return vehicleId ? parseInt(vehicleId) : null;
@@ -305,20 +279,17 @@ class LocationService {
 
   public async getFamilyLocations(): Promise<Map<string, LocationData>> {
     try {
-      // Use the real API to get family locations
       const response = await apiClient.get("/users/locations");
       const locations = response.data;
 
       const familyLocations = new Map<string, LocationData>();
 
-      // Process the API response
       if (Array.isArray(locations)) {
         locations.forEach((location) => {
           familyLocations.set(location.userId, location);
         });
       }
 
-      // If we're in mock mode or no locations were found, add mock data
       if (this.mockMode || familyLocations.size === 0) {
         const mockedLocations = this.mockFamilyLocations();
         mockedLocations.forEach((location) => {
@@ -326,22 +297,18 @@ class LocationService {
         });
       }
 
-      // Update cache
       for (const [userId, locationData] of familyLocations.entries()) {
         this.locationCache.set(userId, locationData);
       }
 
-      // Save to storage
       this.saveToStorage();
 
-      // Notify listeners
       this.notifyListeners();
 
       return familyLocations;
     } catch (error) {
       console.error("Failed to fetch family locations:", error);
 
-      // If API fails, use mock data
       if (this.mockMode || this.locationCache.size === 0) {
         const mockedLocations = this.mockFamilyLocations();
         mockedLocations.forEach((location) => {
@@ -402,18 +369,16 @@ class LocationService {
   }
 
   public mockFamilyLocations(): LocationData[] {
-    // Base location (NYC by default)
     const baseLat = 40.7128;
     const baseLng = -74.006;
 
-    // Create mock locations for family members
     const mockLocations: LocationData[] = [
       {
         userId: "parent",
         vehicleId: 1,
         latitude: baseLat + (Math.random() - 0.5) * 0.03,
         longitude: baseLng + (Math.random() - 0.5) * 0.03,
-        speed: Math.random() * 10, // Stationary or slow
+        speed: Math.random() * 10,
         heading: Math.random() * 360,
         timestamp: new Date().toISOString(),
       },
@@ -422,7 +387,7 @@ class LocationService {
         vehicleId: 2,
         latitude: baseLat + (Math.random() - 0.5) * 0.05,
         longitude: baseLng + (Math.random() - 0.5) * 0.05,
-        speed: 35 + Math.random() * 15, // Moving at higher speed
+        speed: 35 + Math.random() * 15,
         heading: 90,
         timestamp: new Date().toISOString(),
       },
@@ -437,11 +402,9 @@ class LocationService {
       },
     ];
 
-    // Get any existing locations from cache to maintain continuity
     mockLocations.forEach((location) => {
       const existing = this.locationCache.get(location.userId);
       if (existing) {
-        // Make small changes to existing location for realism
         location.latitude = existing.latitude + (Math.random() - 0.5) * 0.002;
         location.longitude = existing.longitude + (Math.random() - 0.5) * 0.002;
       }

@@ -1,5 +1,4 @@
-﻿// src/components/GpsTracking.tsx
-import React, { useState, useEffect, useRef, useCallback } from "react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -88,7 +87,6 @@ const GpsTracking = () => {
     }
   };
 
-  // --- Calculations & Formatting ---
   const calculateDistance = (
     lat1: number,
     lon1: number,
@@ -105,10 +103,10 @@ const GpsTracking = () => {
       Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
       Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // metres
+    return R * c;
   };
 
-  const calculateTripDistance = (locations: LocationData[]): number => {
+  const calculateTripDistanceKm = (locations: LocationData[]): number => {
     if (locations.length < 2) return 0;
     let totalDistanceMeters = 0;
     for (let i = 1; i < locations.length; i++) {
@@ -119,7 +117,7 @@ const GpsTracking = () => {
         locations[i].longitude,
       );
     }
-    return totalDistanceMeters / 1609.34; // miles
+    return totalDistanceMeters / 1000;
   };
 
   const formatCoords = (location: LocationData | null) => {
@@ -158,13 +156,12 @@ const GpsTracking = () => {
     );
   };
 
-  // *** FIX: Define useCallback functions BEFORE useEffect hooks that use them ***
   const addToDebugLog = useCallback((message: string) => {
     if (!isMounted.current) return;
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = `${timestamp} - ${message}`;
     setDebugLog((prevLog) => [logEntry, ...prevLog.slice(0, 49)]);
-  }, []); // Empty dependency array
+  }, []);
 
   const updateMapRoute = useCallback(() => {
     if (
@@ -178,7 +175,6 @@ const GpsTracking = () => {
 
     const googleMaps = window.google.maps;
 
-    // Use a direct copy of the location history
     const currentHistory = [...locationHistoryRef.current];
 
     addToDebugLog(`Drawing map route with ${currentHistory.length} points`);
@@ -191,24 +187,20 @@ const GpsTracking = () => {
       )}`,
     );
 
-    // Clear existing markers
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = [];
 
-    // Create path from all history points
     const path = currentHistory.map((loc) => ({
       lat: Number(loc.latitude),
       lng: Number(loc.longitude),
     }));
 
-    // Add current location to path if it exists
     if (currentLocation) {
       const currentPos = {
         lat: Number(currentLocation.latitude),
         lng: Number(currentLocation.longitude),
       };
 
-      // Only add if it's not the last point already
       const lastPoint = path[path.length - 1];
       if (
         !lastPoint ||
@@ -219,10 +211,8 @@ const GpsTracking = () => {
       }
     }
 
-    // Always set the polyline path with all points
     routePathRef.current.setPath(path);
 
-    // Add start marker
     if (currentHistory.length > 0) {
       const startMarker = new googleMaps.Marker({
         position: {
@@ -242,7 +232,6 @@ const GpsTracking = () => {
       markersRef.current.push(startMarker);
     }
 
-    // Add a marker for each history point (limited to avoid too many markers)
     if (currentHistory.length > 1 && currentHistory.length < 20) {
       for (let i = 1; i < currentHistory.length; i++) {
         const point = currentHistory[i];
@@ -265,7 +254,6 @@ const GpsTracking = () => {
       }
     }
 
-    // Add current position marker
     if (currentLocation) {
       const currentMarker = new googleMaps.Marker({
         position: {
@@ -288,13 +276,11 @@ const GpsTracking = () => {
       markersRef.current.push(currentMarker);
     }
 
-    // Fit map to include all points
     if (path.length > 0) {
       const bounds = new googleMaps.LatLngBounds();
       path.forEach((point) => bounds.extend(point));
       mapInstanceRef.current.fitBounds(bounds);
 
-      // If bounds are too small, set a minimum zoom
       if (path.length === 1) {
         mapInstanceRef.current.setZoom(15);
       }
@@ -304,7 +290,6 @@ const GpsTracking = () => {
   }, [currentLocation, isTracking, addToDebugLog]);
 
   useEffect(() => {
-    // This is a force update to ensure the map reflects the correct history
     if (
       mapInitialized &&
       showMap &&
@@ -326,7 +311,6 @@ const GpsTracking = () => {
   ]);
 
   const initializeMap = useCallback(() => {
-    // First check if component is mounted and container exists
     if (!mapRef.current || !isMounted.current) {
       addToDebugLog(
         "Map init skipped: Map container not ready or component unmounted",
@@ -334,10 +318,8 @@ const GpsTracking = () => {
       return;
     }
 
-    // Enhanced check for Google Maps API being fully loaded
     if (!isGoogleMapsFullyLoaded()) {
       addToDebugLog("Google Maps API not fully loaded yet. Will retry later.");
-      // Schedule a retry after a short delay
       if (isMounted.current && showMap) {
         setTimeout(() => {
           if (isMounted.current && showMap && !mapInstanceRef.current) {
@@ -366,7 +348,6 @@ const GpsTracking = () => {
             }
           : { lat: 40.7128, lng: -74.006 };
 
-      // Create map with safe access to Google Maps API
       const mapOptions = {
         zoom: 15,
         center,
@@ -382,7 +363,6 @@ const GpsTracking = () => {
         mapOptions,
       );
 
-      // Only create polyline if map instance was created successfully
       if (mapInstanceRef.current) {
         routePathRef.current = new window.google.maps.Polyline({
           map: mapInstanceRef.current,
@@ -392,7 +372,6 @@ const GpsTracking = () => {
           strokeWeight: 5,
         });
 
-        // Only call updateMapRoute if everything was initialized successfully
         if (routePathRef.current) {
           updateMapRoute();
           addToDebugLog("Map initialized successfully.");
@@ -403,7 +382,6 @@ const GpsTracking = () => {
       addToDebugLog(`Map Initialization Error: ${error.message}`);
       toast.error("Failed to initialize map.");
 
-      // Clean up any partially initialized resources
       if (routePathRef.current) {
         routePathRef.current.setMap(null);
         routePathRef.current = null;
@@ -415,12 +393,10 @@ const GpsTracking = () => {
   const destroyMapInstance = useCallback(() => {
     addToDebugLog("Attempting to destroy map instance...");
 
-    // First clear all markers
     try {
       if (markersRef.current.length > 0) {
         markersRef.current.forEach((m) => {
           if (m) {
-            // Remove listeners first
             if (window.google?.maps?.event) {
               (google.maps.event as any).clearInstanceListeners(m);
             }
@@ -430,7 +406,6 @@ const GpsTracking = () => {
         markersRef.current = [];
       }
 
-      // Clear polyline
       if (routePathRef.current) {
         if (window.google?.maps?.event) {
           (google.maps.event as any).clearInstanceListeners(
@@ -441,9 +416,7 @@ const GpsTracking = () => {
         routePathRef.current = null;
       }
 
-      // Finally clear map instance
       if (mapInstanceRef.current && window.google?.maps?.event) {
-        // Detach all event listeners
         (google.maps.event as any).clearInstanceListeners(
           mapInstanceRef.current,
         );
@@ -457,16 +430,13 @@ const GpsTracking = () => {
     addToDebugLog("Cleared map instance references.");
   }, [addToDebugLog]);
 
-  // Sync ref whenever state changes
   useEffect(() => {
-    // Debug log to see when history state changes
     if (locationHistoryState.length > 0) {
       addToDebugLog(
         `History state updated with ${locationHistoryState.length} locations`,
       );
     }
 
-    // Sync ref whenever state changes
     locationHistoryRef.current = locationHistoryState;
   }, [locationHistoryState, addToDebugLog]);
 
@@ -490,7 +460,6 @@ const GpsTracking = () => {
     return () => {
       if (!isMounted.current) return;
 
-      // Add this safety check
       if (!locationHistoryRef.current) {
         locationHistoryRef.current = [];
       }
@@ -500,25 +469,21 @@ const GpsTracking = () => {
   useEffect(() => {
     if (!tripStarted) return;
 
-    // Set up an interval to check for changes in the service's history
     const historyCheckInterval = setInterval(() => {
       if (!isMounted.current) return;
 
       const serviceHistory = locationService.getLocationHistory();
 
-      // Only update if the history length has changed
       if (serviceHistory.length !== locationHistoryRef.current.length) {
         addToDebugLog(
           `Sync: Service history has ${serviceHistory.length} points, local has ${locationHistoryRef.current.length}`,
         );
 
-        // Update our local state
         locationHistoryRef.current = serviceHistory;
         setLocationHistoryState(serviceHistory);
 
-        // Update trip data
         setTripData((prevTripData) => {
-          const newDistance = calculateTripDistance(serviceHistory);
+          const newDistance = calculateTripDistanceKm(serviceHistory);
           const updatedTripData = {
             ...prevTripData,
             distance: newDistance,
@@ -530,19 +495,17 @@ const GpsTracking = () => {
           return updatedTripData;
         });
 
-        // If the map is showing, update it
         if (showMap && mapInstanceRef.current && routePathRef.current) {
           updateMapRoute();
         }
       }
-    }, 2000); // Check every 2 seconds
+    }, 2000);
 
     return () => {
       clearInterval(historyCheckInterval);
     };
   }, [tripStarted, showMap, updateMapRoute]);
 
-  // --- Initialization ---
   useEffect(() => {
     isMounted.current = true;
     addToDebugLog("Component Mounted");
@@ -584,9 +547,7 @@ const GpsTracking = () => {
       addToDebugLog("Component Unmounting");
       locationService.removeListener(handleLocationUpdates);
 
-      // Clean up map resources, but only if Google Maps is available
       if (window.google?.maps) {
-        // Clean up markers
         if (markersRef.current.length) {
           markersRef.current.forEach((marker) => {
             if (marker) marker.setMap(null);
@@ -594,28 +555,23 @@ const GpsTracking = () => {
           markersRef.current = [];
         }
 
-        // Clean up polyline
         if (routePathRef.current) {
           routePathRef.current.setMap(null);
           routePathRef.current = null;
         }
       }
 
-      // The map instance itself will be cleaned up by the GoogleMapsWrapper
       mapInstanceRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, []);
 
-  // --- Map Initialization and Cleanup ---
   const prevShowMapRef = useRef(showMap);
 
   useEffect(() => {
-    // Handle map show/hide transitions safely
     const wasShown = prevShowMapRef.current;
     prevShowMapRef.current = showMap;
 
-    // Map is being closed
     if (wasShown && !showMap) {
       const timeoutId = setTimeout(() => {
         if (isMounted.current) {
@@ -625,7 +581,6 @@ const GpsTracking = () => {
       return () => clearTimeout(timeoutId);
     }
 
-    // Map is being opened
     if (showMap) {
       const timeoutId = setTimeout(() => {
         if (!isMounted.current) return;
@@ -638,9 +593,8 @@ const GpsTracking = () => {
                 isMounted.current &&
                 mapRef.current &&
                 !mapInstanceRef.current &&
-                showMap // Double-check map is still supposed to be shown
+                showMap
               ) {
-                // Add a delay to ensure API is fully loaded
                 setTimeout(() => {
                   if (isMounted.current && showMap) {
                     initializeMap();
@@ -658,7 +612,6 @@ const GpsTracking = () => {
           !mapInstanceRef.current &&
           showMap
         ) {
-          // Add a delay here as well
           setTimeout(() => {
             if (isMounted.current && showMap) {
               initializeMap();
@@ -691,10 +644,8 @@ const GpsTracking = () => {
 
   useEffect(() => {
     if (!showMap) {
-      // Reset map initialization state when map is hidden
       setMapInitialized(false);
 
-      // Clean up map resources
       if (window.google?.maps) {
         if (markersRef.current.length) {
           markersRef.current.forEach((marker) => {
@@ -715,7 +666,6 @@ const GpsTracking = () => {
   }, [showMap, addToDebugLog]);
 
   useEffect(() => {
-    // When trip is started, make sure we capture the first location point
     if (
       tripStarted &&
       locationHistoryRef.current.length === 0 &&
@@ -738,7 +688,6 @@ const GpsTracking = () => {
     }
   }, [tripStarted, currentLocation, addToDebugLog, saveTripDataToLocalStorage]);
 
-  // --- Data Fetching ---
   const fetchVehicles = async () => {
     if (!isMounted.current) return;
     setIsLoadingVehicles(true);
@@ -780,7 +729,6 @@ const GpsTracking = () => {
     }
   };
 
-  // --- Location Handling ---
   const handleLocationUpdates = useCallback(
     (locations: Map<string, LocationData>) => {
       if (!isMounted.current) return;
@@ -790,42 +738,34 @@ const GpsTracking = () => {
 
       if (!newLocation) return;
 
-      // Always update current location
       setCurrentLocation(newLocation);
 
-      const speedMph = newLocation.speed
-        ? (newLocation.speed * 2.237).toFixed(1) + "mph"
+      const speedKmh = newLocation.speed
+        ? (newLocation.speed * 3.6).toFixed(0) + " km/h"
         : "N/A";
       addToDebugLog(
-        `Location Update Received: ${newLocation.latitude.toFixed(4)}, ${newLocation.longitude.toFixed(4)} Speed: ${speedMph}`,
+        `Location Update Received: ${newLocation.latitude.toFixed(4)}, ${newLocation.longitude.toFixed(4)} Speed: ${speedKmh}`,
       );
 
-      // If recording a trip, refresh our local history from the service
       if (tripStarted) {
-        // The service will have already added the location to history in its internal update
-        // We just need to get the updated history
         const updatedHistory = locationService.getLocationHistory();
 
-        // Only update our local state if the history has changed
         if (updatedHistory.length !== locationHistoryRef.current.length) {
           addToDebugLog(
             `Updated history from service: ${updatedHistory.length} points (was ${locationHistoryRef.current.length})`,
           );
 
-          // Update our local refs and state
           locationHistoryRef.current = updatedHistory;
           setLocationHistoryState(updatedHistory);
 
-          // Update trip data with new history
           setTripData((prevTripData) => {
-            const newDistance = calculateTripDistance(updatedHistory);
+            const newDistance = calculateTripDistanceKm(updatedHistory);
             const updatedTripData = {
               ...prevTripData,
               distance: newDistance,
               locations: updatedHistory,
             };
 
-            // Save to local storage
             saveTripDataToLocalStorage(updatedTripData);
 
             return updatedTripData;
@@ -862,7 +802,6 @@ const GpsTracking = () => {
     }
   };
 
-  // --- Trip Management ---
   const startTrip = () => {
     if (!isTracking) {
       toast.warning("Start location tracking first.");
@@ -908,19 +847,15 @@ const GpsTracking = () => {
   const initiateTripStart = (startLoc: LocationData) => {
     if (!isMounted.current) return;
 
-    // Start recording history in the service
     locationService.clearLocationHistory();
     locationService.startRecordingHistory();
 
-    // Add the first location point
     locationService.addLocationToHistory(startLoc);
 
-    // Get the initial history array from the service
     const initialHistory = locationService.getLocationHistory();
 
     setStartLocation(startLoc);
 
-    // Update our local state with this history
     locationHistoryRef.current = initialHistory;
     setLocationHistoryState(initialHistory);
 
@@ -958,10 +893,8 @@ const GpsTracking = () => {
   const endTrip = () => {
     if (!tripStarted || !isMounted.current) return;
 
-    // Stop recording history in the service
     locationService.stopRecordingHistory();
 
-    // Get the final history from the service
     const finalHistory = locationService.getLocationHistory();
 
     addToDebugLog(`Ending trip with ${finalHistory.length} points.`);
@@ -974,7 +907,7 @@ const GpsTracking = () => {
       finalEndLocation = `GPS: ${lastLoc.latitude.toFixed(4)}, ${lastLoc.longitude.toFixed(4)}`;
     }
 
-    const finalDistance = calculateTripDistance(finalHistory);
+    const finalDistance = calculateTripDistanceKm(finalHistory);
 
     const finalTripData = {
       ...tripData,
@@ -1050,11 +983,9 @@ const GpsTracking = () => {
   const resetTripState = useCallback(() => {
     if (!isMounted.current) return;
 
-    // Clear history in the service
     locationService.clearLocationHistory();
     locationService.stopRecordingHistory();
 
-    // Reset local state
     setTripData({
       startLocation: "",
       endLocation: "",
@@ -1080,7 +1011,7 @@ const GpsTracking = () => {
       addToDebugLog("Cannot save: No location data in final trip state.");
       return null;
     }
-    const finalDistanceMiles = tripData.distance;
+    const finalDistanceKm = tripData.distance;
     const startPoint = finalHistory[0];
     const endPoint = finalHistory[finalHistory.length - 1];
     const startLocationName =
@@ -1100,12 +1031,12 @@ const GpsTracking = () => {
         ? tripData.endTime.toISOString()
         : new Date().toISOString();
     addToDebugLog(
-      `Prepared trip for saving. Final Distance: ${finalDistanceMiles.toFixed(2)} miles. Points: ${finalHistory.length}`,
+      `Prepared trip for saving. Final Distance: ${finalDistanceKm.toFixed(1)} km. Points: ${finalHistory.length}`,
     );
     return {
       startLocation: startLocationName,
       endLocation: endLocationName,
-      distance: finalDistanceMiles,
+      distance: finalDistanceKm,
       startTime: startTimeStr,
       endTime: endTimeStr,
       purpose: tripData.purpose || "GPS Tracked Trip",
@@ -1125,7 +1056,6 @@ const GpsTracking = () => {
     }
   };
 
-  // --- Render ---
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
@@ -1141,7 +1071,6 @@ const GpsTracking = () => {
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Column 1: Controls & Status */}
         <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
           <h2 className="text-xl font-bold">Tracking Controls</h2>
           {/* Location Status */}
@@ -1155,7 +1084,7 @@ const GpsTracking = () => {
               {currentLocation?.speed !== null &&
                 currentLocation?.speed !== undefined && (
                   <p className="text-xs text-gray-600">
-                    Speed: {(currentLocation.speed * 2.237).toFixed(1)} mph
+                    Speed: {(currentLocation.speed * 3.6).toFixed(1)} km/h
                   </p>
                 )}
             </div>
@@ -1217,7 +1146,7 @@ const GpsTracking = () => {
               </p>
             )}
           </div>
-          {/* Tracking & Trip Buttons */}
+          {/* Tracking and Trip Buttons */}
           <div className="space-y-3 pt-2">
             {!isTracking ? (
               <button
@@ -1257,7 +1186,7 @@ const GpsTracking = () => {
         {/* Column 2: Trip Details */}
         <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
           <h2 className="text-xl font-bold">Trip Details</h2>
-          {tripStarted || locationHistoryRef.current.length > 0 ? ( // Use ref for check
+          {tripStarted || locationHistoryRef.current.length > 0 ? (
             <>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -1270,13 +1199,12 @@ const GpsTracking = () => {
                 </div>
                 <div>
                   <span className="font-medium text-gray-600">Distance:</span>{" "}
-                  {tripData.distance.toFixed(2)} mi
+                  {tripData.distance.toFixed(1)} km
                 </div>
                 <div>
                   <span className="font-medium text-gray-600">Points:</span>{" "}
                   {locationHistoryRef.current.length}
                 </div>{" "}
-                {/* Use ref */}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1322,30 +1250,28 @@ const GpsTracking = () => {
                   disabled={tripStarted}
                 />
               </div>
-              {!tripStarted &&
-                locationHistoryRef.current.length > 0 && ( // Use ref
-                  <button
-                    onClick={saveTrip}
-                    disabled={isSaving || !tripData.purpose}
-                    className={`w-full mt-4 ${!tripData.purpose || isSaving ? "bg-gray-400 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700"} text-white rounded-lg py-2.5 px-4 flex items-center justify-center`}
-                  >
-                    {isSaving ? (
-                      <Loader className="h-5 w-5 mr-2 animate-spin" />
-                    ) : (
-                      <Save className="h-5 w-5 mr-2" />
-                    )}
-                    {isSaving ? "Saving..." : "Save Trip"}
-                  </button>
-                )}
-              {!tripStarted &&
-                locationHistoryRef.current.length > 0 && ( // Use ref
-                  <button
-                    onClick={resetTripState}
-                    className="w-full mt-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg py-2 px-4 text-sm"
-                  >
-                    Discard Trip Data
-                  </button>
-                )}
+              {!tripStarted && locationHistoryRef.current.length > 0 && (
+                <button
+                  onClick={saveTrip}
+                  disabled={isSaving || !tripData.purpose}
+                  className={`w-full mt-4 ${!tripData.purpose || isSaving ? "bg-gray-400 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700"} text-white rounded-lg py-2.5 px-4 flex items-center justify-center`}
+                >
+                  {isSaving ? (
+                    <Loader className="h-5 w-5 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-5 w-5 mr-2" />
+                  )}
+                  {isSaving ? "Saving..." : "Save Trip"}
+                </button>
+              )}
+              {!tripStarted && locationHistoryRef.current.length > 0 && (
+                <button
+                  onClick={resetTripState}
+                  className="w-full mt-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg py-2 px-4 text-sm"
+                >
+                  Discard Trip Data
+                </button>
+              )}
             </>
           ) : (
             <div className="text-center py-10 text-gray-500">
@@ -1355,7 +1281,7 @@ const GpsTracking = () => {
           )}
         </div>
 
-        {/* Column 3: Log & Map Toggle */}
+        {/* Column 3: Log and Map Toggle */}
         <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Activity Log</h2>
@@ -1394,9 +1320,8 @@ const GpsTracking = () => {
           <MapErrorBoundary>
             <div className="w-full h-96 rounded-lg border border-gray-300">
               <GoogleMapsWrapper
-                height="384px" // 96 * 4px = 384px
+                height="384px"
                 onMapLoaded={(mapInstance) => {
-                  // Only proceed if not already initialized
                   if (mapInitialized) {
                     addToDebugLog(
                       "Map already initialized, skipping redundant initialization",
@@ -1406,10 +1331,8 @@ const GpsTracking = () => {
 
                   addToDebugLog("Initial map instance received");
 
-                  // Store the map instance reference
                   mapInstanceRef.current = mapInstance;
 
-                  // Create polyline once we have the map instance
                   if (mapInstance && window.google?.maps) {
                     routePathRef.current = new window.google.maps.Polyline({
                       map: mapInstance,
@@ -1419,7 +1342,6 @@ const GpsTracking = () => {
                       strokeWeight: 5,
                     });
 
-                    // Add route data and update markers
                     updateMapRoute();
                     setMapInitialized(true);
                     addToDebugLog("Map initialized successfully.");

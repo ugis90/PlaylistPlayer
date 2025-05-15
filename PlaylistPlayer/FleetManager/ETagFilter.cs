@@ -1,8 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using FleetManager.Helpers;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 
 namespace FleetManager;
 
@@ -46,8 +44,6 @@ public class ETagFilter : IEndpointFilter
                 break;
             }
             case IResult:
-                // For other types of IResult, we can't generate an ETag
-                // So we just return the result as-is
                 return result;
         }
 

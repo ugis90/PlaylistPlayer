@@ -1,7 +1,5 @@
-﻿// FleetManager/Auth/Model/FleetRoles.cs
-using Microsoft.AspNetCore.Identity;
-using System.Collections.Generic;
-using FleetManager.Data.Entities; // Add this
+﻿using Microsoft.AspNetCore.Identity;
+using FleetManager.Data.Entities;
 
 namespace FleetManager.Auth.Model;
 
@@ -14,17 +12,16 @@ public class FleetUser : IdentityUser
 
 public static class FleetRoles
 {
-    // *** FIX: Use Uppercase for consistency with Identity's normalization ***
     public const string Admin = "ADMIN";
     public const string FleetUser = "FLEETUSER";
     public const string Parent = "PARENT";
-    public const string Teenager = "TEENAGER";
+    public const string YoungDriver = "YOUNGDRIVER";
 
-    public static readonly IReadOnlyCollection<string> All = new[]
-    {
+    public static readonly IReadOnlyCollection<string> All =
+    [
         Admin,
         FleetUser,
         Parent,
-        Teenager
-    };
+        YoungDriver
+    ];
 }

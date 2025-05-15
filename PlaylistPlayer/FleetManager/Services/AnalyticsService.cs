@@ -1,11 +1,6 @@
-﻿// FleetManager/Services/AnalyticsService.cs
-using FleetManager.Data;
+﻿using FleetManager.Data;
 using FleetManager.Data.Entities;
 using Microsoft.EntityFrameworkCore;
-using System; // Add this for DateTimeOffset, Math, etc.
-using System.Collections.Generic; // Add this for List, Dictionary
-using System.Linq; // Add this for LINQ methods like Sum, Average, GroupBy, SelectMany etc.
-using System.Threading.Tasks; // Add this for Task
 
 namespace FleetManager.Services;
 
@@ -22,10 +17,9 @@ public class AnalyticsService(FleetDbContext dbContext)
         var start = startDate ?? DateTimeOffset.UtcNow.AddYears(-1);
         var end = endDate ?? DateTimeOffset.UtcNow;
 
-        // *** FIX: Include MaintenanceRecords directly from Vehicle ***
         var vehicle = await dbContext.Vehicles
-            .Include(v => v.Trips) // Still need trips for trip count and mileage
-            .Include(v => v.MaintenanceRecords) // Include maintenance records directly
+            .Include(v => v.Trips)
+            .Include(v => v.MaintenanceRecords)
             .Include(v => v.FuelRecords)
             .FirstOrDefaultAsync(v => v.Id == vehicleId);
 
@@ -34,55 +28,44 @@ public class AnalyticsService(FleetDbContext dbContext)
             throw new KeyNotFoundException($"Vehicle with ID {vehicleId} not found");
         }
 
-        // Filter trips by date range
         var tripsInPeriod = vehicle.Trips
             .Where(t => t.StartTime >= start && t.EndTime <= end)
             .ToList();
 
-        // *** FIX: Filter MaintenanceRecords directly from the vehicle based on date ***
         var maintenanceRecordsInPeriod = vehicle.MaintenanceRecords
             .Where(m => m.Date >= start && m.Date <= end)
             .ToList();
 
-        // Filter fuel records by date range
         var fuelRecordsInPeriod = vehicle.FuelRecords
             .Where(f => f.Date >= start && f.Date <= end)
             .ToList();
 
-        // Calculate total cost
         var maintenanceCosts = maintenanceRecordsInPeriod.Sum(m => m.Cost);
         var fuelCosts = fuelRecordsInPeriod.Sum(f => f.TotalCost);
         var totalCost = maintenanceCosts + fuelCosts;
 
-        // Calculate total mileage for the period (using trips or fuel records)
         var mileage = CalculateMileageForPeriod(tripsInPeriod, fuelRecordsInPeriod);
 
-        // Calculate cost per mile
-        decimal costPerMile = mileage > 0 ? totalCost / (decimal)mileage : 0; // Cast mileage to decimal
+        decimal costPerKm = mileage > 0 ? totalCost / (decimal)mileage : 0; // Cast mileage to decimal
 
-        // Calculate fuel efficiency (MPG)
         double fuelEfficiency = CalculateAverageFuelEfficiency(fuelRecordsInPeriod);
 
-        // Analyze upcoming maintenance (using all maintenance history for the vehicle)
         var upcomingMaintenance = PredictUpcomingMaintenance(
             vehicle,
             vehicle.MaintenanceRecords.ToList()
-        ); // Use all records for prediction
+        );
 
-        // Generate fuel efficiency trend
         var fuelEfficiencyTrend = CalculateFuelEfficiencyTrend(fuelRecordsInPeriod);
 
-        // Calculate cost by category
         var costByCategory = new CostByCategoryDto(fuelCosts, maintenanceCosts, 0);
 
-        // Calculate cost by month
         var costByMonth = CalculateCostByMonth(maintenanceRecordsInPeriod, fuelRecordsInPeriod);
 
         return new VehicleAnalyticsDto(
             totalCost,
             mileage,
-            costPerMile,
-            tripsInPeriod.Count, // Use Count() method
+            costPerKm,
+            tripsInPeriod.Count,
             fuelEfficiency,
             maintenanceCosts,
             fuelCosts,
@@ -102,18 +85,15 @@ public class AnalyticsService(FleetDbContext dbContext)
         var start = startDate ?? DateTimeOffset.UtcNow.AddYears(-1);
         var end = endDate ?? DateTimeOffset.UtcNow;
 
-        // *** FIX: Include MaintenanceRecords directly from Vehicle ***
         var vehicles = await dbContext.Vehicles
             .Where(v => v.UserId == userId)
             .Include(v => v.Trips)
-            .Include(v => v.MaintenanceRecords) // Include maintenance records
+            .Include(v => v.MaintenanceRecords)
             .Include(v => v.FuelRecords)
             .ToListAsync();
 
         if (vehicles.Count == 0)
         {
-            // Return a default/empty DTO instead of throwing an exception
-            // This might be better UX if a user has no vehicles yet.
             return new FleetAnalyticsDto(
                 0,
                 0,
@@ -126,26 +106,20 @@ public class AnalyticsService(FleetDbContext dbContext)
                 new List<CostTrendDto>(),
                 new List<FleetUpcomingMaintenanceDto>()
             );
-            // throw new InvalidOperationException("No vehicles found for the user");
         }
 
-        // Process vehicle data
         var (totalMileage, totalCost, costBreakdown, averageFuelEfficiency) =
             ProcessVehicleStatistics(vehicles, start, end);
 
-        // Calculate fleet statistics
         int totalVehicles = vehicles.Count;
-        decimal averageCostPerMile = totalMileage > 0 ? totalCost / (decimal)totalMileage : 0; // Cast mileage
+        decimal averageCostPerMile = totalMileage > 0 ? totalCost / (decimal)totalMileage : 0;
 
-        // Find most used and efficient vehicles
         var mostUsedVehicle = FindMostUsedVehicle(vehicles, start, end);
         var mostEfficientVehicle = FindMostEfficientVehicle(vehicles, start, end);
 
-        // Calculate cost trend across all vehicles
         var costTrend = ConvertToTrendData(CalculateFleetCostTrend(vehicles, start, end));
 
-        // Get upcoming maintenance across all vehicles
-        var upcomingMaintenance = GetFleetUpcomingMaintenance(vehicles); // Uses all history
+        var upcomingMaintenance = GetFleetUpcomingMaintenance(vehicles);
 
         return new FleetAnalyticsDto(
             totalVehicles,
@@ -166,7 +140,7 @@ public class AnalyticsService(FleetDbContext dbContext)
         return costByMonth.Select(c => new CostTrendDto(c.Month, c.Cost)).ToList();
     }
 
-    private static (
+    public static (
         int totalMileage,
         decimal totalCost,
         Dictionary<string, decimal> costBreakdown,
@@ -176,7 +150,7 @@ public class AnalyticsService(FleetDbContext dbContext)
         int totalMileage = 0;
         decimal totalCost = 0;
         var costBreakdown = new Dictionary<string, decimal>();
-        double totalFuelEfficiencySum = 0; // Renamed for clarity
+        double totalFuelEfficiencySum = 0;
         int vehiclesWithFuelData = 0;
 
         foreach (var vehicle in vehicles)
@@ -184,7 +158,6 @@ public class AnalyticsService(FleetDbContext dbContext)
             var tripsInPeriod = vehicle.Trips
                 .Where(t => t.StartTime >= start && t.EndTime <= end)
                 .ToList();
-            // *** FIX: Filter MaintenanceRecords directly from vehicle ***
             var maintenanceRecordsInPeriod = vehicle.MaintenanceRecords
                 .Where(m => m.Date >= start && m.Date <= end)
                 .ToList();
@@ -202,15 +175,11 @@ public class AnalyticsService(FleetDbContext dbContext)
 
             costBreakdown.Add($"{vehicle.Make} {vehicle.Model} ({vehicle.Year})", vehicleTotalCost);
 
-            if (fuelRecordsInPeriod.Count >= 2) // Need at least 2 records for MPG
-            {
-                var vehicleEfficiency = CalculateAverageFuelEfficiency(fuelRecordsInPeriod);
-                if (vehicleEfficiency > 0) // Only include valid MPG calculations
-                {
-                    totalFuelEfficiencySum += vehicleEfficiency;
-                    vehiclesWithFuelData++;
-                }
-            }
+            if (fuelRecordsInPeriod.Count < 2) continue;
+            var vehicleEfficiency = CalculateAverageFuelEfficiency(fuelRecordsInPeriod);
+            if (vehicleEfficiency <= 0) continue;
+            totalFuelEfficiencySum += vehicleEfficiency;
+            vehiclesWithFuelData++;
         }
 
         double averageFuelEfficiency =
@@ -219,7 +188,7 @@ public class AnalyticsService(FleetDbContext dbContext)
         return (totalMileage, totalCost, costBreakdown, averageFuelEfficiency);
     }
 
-    private static MostUsedVehicleDto FindMostUsedVehicle(
+    public static MostUsedVehicleDto FindMostUsedVehicle(
         List<Vehicle> vehicles,
         DateTimeOffset start,
         DateTimeOffset end
@@ -233,8 +202,8 @@ public class AnalyticsService(FleetDbContext dbContext)
                         Vehicle = v,
                         TripCount = v.Trips.Count(t => t.StartTime >= start && t.EndTime <= end)
                     }
-            ) // Calculate count first
-            .Where(x => x.TripCount > 0) // Only consider vehicles with trips in the period
+            )
+            .Where(x => x.TripCount > 0)
             .OrderByDescending(x => x.TripCount)
             .FirstOrDefault();
 
@@ -242,7 +211,6 @@ public class AnalyticsService(FleetDbContext dbContext)
         {
             return new MostUsedVehicleDto(0, UnknownVehicleLabel, UnknownVehicleLabel, 0);
         }
-        // *** FIX: Use TripCount directly ***
         return new MostUsedVehicleDto(
             mostUsed.Vehicle.Id,
             mostUsed.Vehicle.Make,
@@ -251,7 +219,7 @@ public class AnalyticsService(FleetDbContext dbContext)
         );
     }
 
-    private static MostEfficientVehicleDto FindMostEfficientVehicle(
+    public static MostEfficientVehicleDto FindMostEfficientVehicle(
         List<Vehicle> vehicles,
         DateTimeOffset start,
         DateTimeOffset end
@@ -268,7 +236,7 @@ public class AnalyticsService(FleetDbContext dbContext)
                             .ToList()
                     }
             )
-            .Where(x => x.FuelRecordsInPeriod.Count >= 2) // Ensure enough records for calculation
+            .Where(x => x.FuelRecordsInPeriod.Count >= 2)
             .Select(
                 x =>
                     new
@@ -277,7 +245,7 @@ public class AnalyticsService(FleetDbContext dbContext)
                         Efficiency = CalculateAverageFuelEfficiency(x.FuelRecordsInPeriod)
                     }
             )
-            .Where(x => x.Efficiency > 0) // Only consider valid efficiencies
+            .Where(x => x.Efficiency > 0)
             .OrderByDescending(x => x.Efficiency)
             .FirstOrDefault();
 
@@ -299,10 +267,9 @@ public class AnalyticsService(FleetDbContext dbContext)
         DateTimeOffset end
     )
     {
-        // *** FIX: Select MaintenanceRecords directly from vehicles ***
         var allMaintenanceRecords = vehicles
-            .SelectMany(v => v.MaintenanceRecords) // Select from vehicle's collection
-            .Where(m => m.Date >= start && m.Date <= end) // Filter by date
+            .SelectMany(v => v.MaintenanceRecords)
+            .Where(m => m.Date >= start && m.Date <= end)
             .ToList();
 
         var allFuelRecords = vehicles
@@ -320,8 +287,6 @@ public class AnalyticsService(FleetDbContext dbContext)
         var upcomingMaintenance = new List<FleetUpcomingMaintenanceDto>();
         foreach (var vehicle in vehicles)
         {
-            // *** FIX: Use MaintenanceRecords directly from vehicle ***
-            // Pass *all* records for the vehicle to PredictUpcomingMaintenance
             var vehicleUpcoming = PredictUpcomingMaintenance(
                 vehicle,
                 vehicle.MaintenanceRecords.ToList()
@@ -335,10 +300,9 @@ public class AnalyticsService(FleetDbContext dbContext)
         return upcomingMaintenance.OrderBy(m => m.DueDate).ToList();
     }
 
-    // CalculateMileageForPeriod remains the same (uses Trips or Fuel)
     public static int CalculateMileageForPeriod(List<Trip> trips, List<FuelRecord> fuelRecords)
     {
-        if (trips.Any())
+        if (trips.Count != 0)
             return (int)trips.Sum(t => t.Distance);
         if (fuelRecords.Count < 2)
             return 0;
@@ -347,28 +311,41 @@ public class AnalyticsService(FleetDbContext dbContext)
         return maxMileage - minMileage;
     }
 
-    // CalculateAverageFuelEfficiency remains the same
     public static double CalculateAverageFuelEfficiency(List<FuelRecord> fuelRecords)
     {
         if (fuelRecords.Count < 2)
             return 0;
-        var sortedRecords = fuelRecords.OrderBy(f => f.Mileage).ToList();
-        var fullTankFillups = sortedRecords.Where(f => f.FullTank).ToList();
+
+        var sortedRecordsByMileage = fuelRecords.OrderBy(f => f.Mileage).ToList();
+        var fullTankFillups = sortedRecordsByMileage.Where(f => f.FullTank).ToList();
+
         if (fullTankFillups.Count < 2)
-            fullTankFillups = sortedRecords; // Fallback
-        double totalDistance = 0;
-        double totalGallons = 0;
+        {
+            fullTankFillups = sortedRecordsByMileage;
+            if (fullTankFillups.Count < 2)
+                return 0;
+        }
+
+        double totalDistanceKm = 0;
+        double totalLiters = 0;
+
         for (int i = 1; i < fullTankFillups.Count; i++)
         {
             var current = fullTankFillups[i];
             var previous = fullTankFillups[i - 1];
             var distance = current.Mileage - previous.Mileage;
-            if (distance <= 0 || distance >= 1000)
-                continue; // Sanity check
-            totalDistance += distance;
-            totalGallons += current.Gallons;
+
+            if (distance is <= 0 or >= 2000)
+                continue;
+            totalDistanceKm += distance;
+            totalLiters += current.Liters;
         }
-        return totalGallons > 0 ? Math.Round(totalDistance / totalGallons, 1) : 0;
+
+        if (totalLiters > 0 && totalDistanceKm > 0)
+        {
+            return Math.Round((totalLiters / totalDistanceKm) * 100, 1);
+        }
+        return 0;
     }
 
     public static List<UpcomingMaintenanceDto> PredictUpcomingMaintenance(
@@ -379,26 +356,22 @@ public class AnalyticsService(FleetDbContext dbContext)
         var currentDate = DateTimeOffset.UtcNow;
         var alerts = new List<UpcomingMaintenanceDto>();
 
-        // Only process if we have maintenance history
-        if (!maintenanceHistory.Any())
+        if (maintenanceHistory.Count == 0)
         {
             return GetDefaultMaintenanceSchedule(vehicle);
         }
 
-        // Group by service type
         var serviceGroups = maintenanceHistory
             .GroupBy(m => m.ServiceType)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         ProcessExistingMaintenanceRecords(serviceGroups, vehicle, currentDate, alerts);
 
-        // Add default maintenance if some common types aren't in history
         AddMissingMaintenanceTypes(alerts, serviceGroups.Keys.ToList(), vehicle);
 
         return alerts.OrderBy(a => a.DueDate).ToList();
     }
 
-    // Breaking down the PredictUpcomingMaintenance method to reduce complexity
     private static void ProcessExistingMaintenanceRecords(
         Dictionary<string, List<MaintenanceRecord>> serviceGroups,
         Vehicle vehicle,
@@ -406,18 +379,15 @@ public class AnalyticsService(FleetDbContext dbContext)
         List<UpcomingMaintenanceDto> alerts
     )
     {
-        // Check each service type for upcoming maintenance
-        foreach (var serviceGroup in serviceGroups)
+        foreach (var (serviceType, value) in serviceGroups)
         {
-            var serviceType = serviceGroup.Key;
-            var records = serviceGroup.Value.OrderByDescending(r => r.Date).ToList();
+            var records = value.OrderByDescending(r => r.Date).ToList();
 
             if (records.Count == 0)
                 continue;
 
-            var latestRecord = records[0]; // Use indexing instead of First()
+            var latestRecord = records[0];
 
-            // Check if the record has a next service due date
             if (latestRecord.NextServiceDue.HasValue)
             {
                 if (latestRecord.NextServiceDue.Value <= currentDate.AddMonths(3))
@@ -433,7 +403,6 @@ public class AnalyticsService(FleetDbContext dbContext)
             }
             else
             {
-                // Predict based on service type and historical pattern
                 var predictedDate = PredictNextServiceDate(
                     serviceType,
                     records,
@@ -457,29 +426,37 @@ public class AnalyticsService(FleetDbContext dbContext)
     {
         var currentDate = DateTimeOffset.UtcNow;
         var alerts = new List<UpcomingMaintenanceDto>();
+        
+        int ageInServiceYears = currentDate.Year - vehicle.Year;
+        int ageInMonthsRough = (currentDate.Year - vehicle.Year) * 12 + currentDate.Month - 1;
 
-        // No maintenance history - recommend based on vehicle age and mileage
-        int ageInMonths = (currentDate.Year - vehicle.Year) * 12 + currentDate.Month - 1;
 
-        // Oil change (every 3 months or 3000 miles)
-        if (ageInMonths % 3 == 0 || vehicle.CurrentMileage % 3000 <= 500)
+        // Oil Change (Tepalų keitimas): every 12 months or 15,000 km
+        if (ageInMonthsRough % 12 == 0 || vehicle.CurrentMileage % 15000 <= 1000)
         {
-            alerts.Add(new UpcomingMaintenanceDto("Oil Change", currentDate.AddDays(15), 45.99m));
+            alerts.Add(new UpcomingMaintenanceDto("Oil Change", currentDate.AddDays(30), 70.00m));
         }
 
-        // Tire rotation (every 6 months or 6000-8000 miles)
-        if (ageInMonths % 6 == 0 || vehicle.CurrentMileage % 6000 <= 500)
+        // Tire Rotation/Check (Padangų rotacija/patikra): every 6-12 months or 10,000 km
+        if (ageInMonthsRough % 6 == 0 || vehicle.CurrentMileage % 10000 <= 800)
         {
             alerts.Add(
-                new UpcomingMaintenanceDto("Tire Rotation", currentDate.AddDays(30), 25.00m)
+                new UpcomingMaintenanceDto("Tire Rotation", currentDate.AddDays(45), 30.00m)
             );
         }
 
-        // Yearly maintenance check
-        if (ageInMonths % 12 == 0)
+        // Annual Service / Check-up (Metinis Aptarnavimas): every 12 months
+        if (ageInMonthsRough % 12 == 0 && ageInServiceYears >= 1)
         {
             alerts.Add(
-                new UpcomingMaintenanceDto("Annual Inspection", currentDate.AddDays(30), 89.99m)
+                new UpcomingMaintenanceDto("Annual Service", currentDate.AddDays(60), 120.00m)
+            );
+        }
+
+        // Mandatory Technical Inspection (Techninė Apžiūra - TA)
+        if (ageInServiceYears >= 3 && ageInMonthsRough % 24 == 0) {
+             alerts.Add(
+                new UpcomingMaintenanceDto("Mandatory Technical Inspection", currentDate.AddDays(90), 50.00m)
             );
         }
 
@@ -498,7 +475,6 @@ public class AnalyticsService(FleetDbContext dbContext)
             return PredictBasedOnStandardIntervals(serviceType, serviceHistory);
         }
 
-        // Calculate average time between services
         var intervals = new List<TimeSpan>();
         var mileageIntervals = new List<int>();
 
@@ -511,25 +487,19 @@ public class AnalyticsService(FleetDbContext dbContext)
             mileageIntervals.Add(current.Mileage - next.Mileage);
         }
 
-        // Calculate average interval
         var avgTimeInterval = new TimeSpan((long)intervals.Average(i => i.Ticks));
         var avgMileageInterval = (int)mileageIntervals.Average();
 
-        // Get latest service record
-        var latestService = serviceHistory[0]; // Use indexing instead of First()
+        var latestService = serviceHistory[0];
 
-        // Predict based on time
         var predictedTimeDate = latestService.Date + avgTimeInterval;
 
-        // Predict based on mileage
         var mileageDiff = currentMileage - latestService.Mileage;
         var remainingMileage = avgMileageInterval - mileageDiff;
 
-        // Estimate time to reach mileage threshold (assuming avg 1000 miles/month)
-        var monthsToMileageThreshold = Math.Max(0, (double)remainingMileage / 1000);
+        var monthsToMileageThreshold = Math.Max(0, (double)remainingMileage / 1600);
         var predictedMileageDate = DateTimeOffset.UtcNow.AddMonths((int)monthsToMileageThreshold);
 
-        // Return the earlier of the two predictions
         return predictedTimeDate < predictedMileageDate ? predictedTimeDate : predictedMileageDate;
     }
 
@@ -541,9 +511,8 @@ public class AnalyticsService(FleetDbContext dbContext)
         // If we have at least one record
         if (serviceHistory.Count <= 0)
             return null;
-        var latestService = serviceHistory[0]; // Use indexing instead of First()
+        var latestService = serviceHistory[0];
 
-        // Use switch expression instead of switch statement
         return serviceType.ToLower() switch
         {
             "oil change" => latestService.Date.AddMonths(3),
@@ -551,10 +520,8 @@ public class AnalyticsService(FleetDbContext dbContext)
             "brake inspection" => latestService.Date.AddMonths(12),
             "brake service" => latestService.Date.AddMonths(12),
             "air filter" => latestService.Date.AddMonths(12),
-            _ => latestService.Date.AddMonths(6) // Default: 6 months
+            _ => latestService.Date.AddMonths(6)
         };
-
-        // No service history
     }
 
     public static decimal EstimateServiceCost(
@@ -576,7 +543,7 @@ public class AnalyticsService(FleetDbContext dbContext)
             "brake inspection" or "brake service" => 150.00m,
             "air filter" => 20.00m,
             "annual inspection" or "inspection" => 89.99m,
-            _ => 50.00m // Generic estimate
+            _ => 50.00m
         };
     }
 
@@ -594,7 +561,6 @@ public class AnalyticsService(FleetDbContext dbContext)
         CheckForAnnualInspection(alerts, existingTypes, vehicle, currentDate, ageInMonths);
     }
 
-    // Breaking down AddMissingMaintenanceTypes to reduce complexity
     private static void CheckForOilChange(
         List<UpcomingMaintenanceDto> alerts,
         List<string> existingTypes,
@@ -602,11 +568,9 @@ public class AnalyticsService(FleetDbContext dbContext)
         DateTimeOffset currentDate
     )
     {
-        // Check for oil change
         if (existingTypes.Any(t => t.Contains("oil", StringComparison.CurrentCultureIgnoreCase)))
             return;
-        // Recommend based on mileage
-        var mileageSinceLast = vehicle.CurrentMileage % 3000;
+        var mileageSinceLast = vehicle.CurrentMileage % 5000;
         if (mileageSinceLast is > 2500 or < 500)
         {
             alerts.Add(new UpcomingMaintenanceDto("Oil Change", currentDate.AddDays(15), 45.99m));
@@ -620,7 +584,6 @@ public class AnalyticsService(FleetDbContext dbContext)
         DateTimeOffset currentDate
     )
     {
-        // Check for tire rotation
         if (
             existingTypes.Any(
                 t =>
@@ -629,8 +592,8 @@ public class AnalyticsService(FleetDbContext dbContext)
             )
         )
             return;
-        var mileageSinceLast = vehicle.CurrentMileage % 6000;
-        if (mileageSinceLast is > 5500 or < 500)
+        var mileageSinceLast = vehicle.CurrentMileage % 10000;
+        if (mileageSinceLast is > 8800 or < 850)
         {
             alerts.Add(
                 new UpcomingMaintenanceDto("Tire Rotation", currentDate.AddDays(30), 25.00m)
@@ -646,7 +609,6 @@ public class AnalyticsService(FleetDbContext dbContext)
         int ageInMonths
     )
     {
-        // Check for annual inspection
         bool hasInspection = existingTypes.Any(
             t =>
                 t.Contains("inspection", StringComparison.CurrentCultureIgnoreCase)
@@ -661,49 +623,65 @@ public class AnalyticsService(FleetDbContext dbContext)
         }
     }
 
-    public static List<FuelEfficiencyTrendDto> CalculateFuelEfficiencyTrend(
-        List<FuelRecord> fuelRecords
-    )
+    public static List<FuelEfficiencyTrendDto> CalculateFuelEfficiencyTrend(List<FuelRecord> fuelRecords)
     {
-        if (fuelRecords.Count < 2)
-        {
-            return new List<FuelEfficiencyTrendDto>();
-        }
+        if (fuelRecords == null || fuelRecords.Count < 2)
+            return [];
 
-        // Group by month
-        var monthlyRecords = fuelRecords
-            .GroupBy(f => new DateTime(f.Date.Year, f.Date.Month, 1, 0, 0, 0, DateTimeKind.Utc))
-            .OrderBy(g => g.Key)
+        var trendData = fuelRecords
+            .GroupBy(fr => new { fr.VehicleId, fr.Date.Year, fr.Date.Month })
+            .Select(group => new
+            {
+                group.Key.VehicleId,
+                Year = group.Key.Year,
+                Month = group.Key.Month,
+                Records = group.ToList()
+            })
+            .Select(vehicleMonthData => new
+            {
+                vehicleMonthData.Year,
+                vehicleMonthData.Month,
+                LitersPer100Km = CalculateMonthlyLitersPer100Km(vehicleMonthData.Records)
+            })
+            .Where(monthlyResult => monthlyResult.LitersPer100Km > 0)
+            .GroupBy(r => new { r.Year, r.Month })
+            .Select(finalGroup => new FuelEfficiencyTrendDto(
+                new DateTimeOffset(finalGroup.Key.Year, finalGroup.Key.Month, 1, 0, 0, 0, TimeSpan.Zero),
+                Math.Round(finalGroup.Average(g => g.LitersPer100Km), 1)
+            ))
+            .OrderBy(dto => dto.Date)
             .ToList();
 
-        return (
-            from monthGroup in monthlyRecords
-            where monthGroup.Count() >= 2
-            let mpg = CalculateMonthlyMpg(monthGroup.ToList())
-            where mpg > 0
-            select new FuelEfficiencyTrendDto(new DateTimeOffset(monthGroup.Key), mpg)
-        ).ToList();
+        return trendData;
     }
 
-    private static double CalculateMonthlyMpg(List<FuelRecord> recordsInMonth)
+    public static double CalculateMonthlyLitersPer100Km(List<FuelRecord> recordsInMonth)
     {
-        // Sort by mileage within the month
-        var sortedRecords = recordsInMonth.OrderBy(f => f.Mileage).ToList();
+        if (recordsInMonth == null || recordsInMonth.Count < 2) return 0;
 
-        // Calculate mpg for this month
-        double totalDistance = 0;
-        double totalGallons = 0;
+        var sortedRecords = recordsInMonth.OrderBy(f => f.Mileage).ToList();
+        double totalDistanceKmInMonth = 0;
+        double totalLitersInMonth = 0;
 
         for (int i = 1; i < sortedRecords.Count; i++)
         {
-            var distance = sortedRecords[i].Mileage - sortedRecords[i - 1].Mileage;
-            if (distance is <= 0 or >= 1000)
-                continue; // Sanity check
-            totalDistance += distance;
-            totalGallons += sortedRecords[i].Gallons;
+            var currentFill = sortedRecords[i];
+            var previousFill = sortedRecords[i - 1];
+
+            if (!currentFill.FullTank || !previousFill.FullTank) continue;
+            var distanceSegment = currentFill.Mileage - previousFill.Mileage;
+            var litersSegment = currentFill.Liters;
+
+            if (distanceSegment <= 0 || distanceSegment >= 2000 || litersSegment <= 0) continue;
+            totalDistanceKmInMonth += distanceSegment;
+            totalLitersInMonth += litersSegment;
         }
 
-        return totalGallons > 0 ? Math.Round(totalDistance / totalGallons, 1) : 0;
+        if (totalLitersInMonth > 0 && totalDistanceKmInMonth > 0)
+        {
+            return Math.Round((totalLitersInMonth / totalDistanceKmInMonth) * 100, 1);
+        }
+        return 0;
     }
 
     public static List<CostByMonthDto> CalculateCostByMonth(
@@ -711,7 +689,6 @@ public class AnalyticsService(FleetDbContext dbContext)
         List<FuelRecord> fuelRecords
     )
     {
-        // Combine all costs and group by month
         var maintenanceCostsByMonth = maintenanceRecords
             .GroupBy(m => new { m.Date.Year, m.Date.Month })
             .Select(
@@ -729,7 +706,6 @@ public class AnalyticsService(FleetDbContext dbContext)
                     }
             );
 
-        // Combine and sum
         var allCosts = maintenanceCostsByMonth
             .Concat(fuelCostsByMonth)
             .GroupBy(c => c.YearMonth)

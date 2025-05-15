@@ -1,16 +1,10 @@
-﻿// FleetManager/Auth/AuthEndpoints.cs
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using FleetManager.Auth.Model;
 using FleetManager.Data;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 using FluentValidation;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
-using Microsoft.AspNetCore.Http;
-using System.Linq;
-using System;
-using System.Collections.Generic; // For List
 
 namespace FleetManager.Auth;
 
@@ -43,7 +37,7 @@ public static class AuthEndpoints
                 .WithMessage("Password must contain a special character.");
             RuleFor(x => x.Role)
                 .NotEmpty()
-                .Must(role => FleetRoles.All.Contains(role.ToUpperInvariant())) // Check uppercase
+                .Must(role => FleetRoles.All.Contains(role.ToUpperInvariant()))
                 .WithMessage($"Role must be one of: {string.Join(", ", FleetRoles.All)}");
         }
     }
@@ -90,11 +84,11 @@ public static class AuthEndpoints
                                 e => e.Code,
                                 e => new[] { e.Description }
                             );
-                            await transaction.RollbackAsync(); // Rollback before returning
+                            await transaction.RollbackAsync();
                             return Results.ValidationProblem(identityErrors);
                         }
 
-                        var roleToAdd = dto.Role.ToUpperInvariant(); // Ensure uppercase
+                        var roleToAdd = dto.Role.ToUpperInvariant();
                         if (!FleetRoles.All.Contains(roleToAdd))
                         {
                             await transaction.RollbackAsync();
@@ -103,7 +97,7 @@ public static class AuthEndpoints
                             );
                         }
 
-                        var roleResult = await userManager.AddToRoleAsync(user, roleToAdd); // Add uppercase role
+                        var roleResult = await userManager.AddToRoleAsync(user, roleToAdd);
                         if (!roleResult.Succeeded)
                         {
                             await transaction.RollbackAsync();
@@ -155,7 +149,6 @@ public static class AuthEndpoints
                     );
 
                 var rolesFromDb = await userManager.GetRolesAsync(user);
-                // *** FIX: Force roles to uppercase before putting in token ***
                 var rolesForToken = rolesFromDb.Select(r => r.ToUpperInvariant()).ToList();
                 Console.WriteLine(
                     $"User {user.UserName} roles (DB): {string.Join(", ", rolesFromDb)} -> For Token: {string.Join(", ", rolesForToken)}"
@@ -167,7 +160,7 @@ public static class AuthEndpoints
                     user.UserName!,
                     user.Id,
                     rolesForToken
-                ); // Pass uppercase roles
+                );
                 var refreshToken = jwtTokenService.CreateRefreshToken(
                     sessionId,
                     user.Id,
@@ -190,7 +183,7 @@ public static class AuthEndpoints
                 };
                 httpContext.Response.Cookies.Append("RefreshToken", refreshToken, cookieOptions);
 
-                var primaryRole = rolesForToken.FirstOrDefault() ?? FleetRoles.FleetUser; // Use uppercase constant
+                var primaryRole = rolesForToken.FirstOrDefault() ?? FleetRoles.FleetUser;
                 var userInfo = new UserInfo(
                     username: user.UserName!,
                     email: user.Email!,
@@ -237,7 +230,6 @@ public static class AuthEndpoints
                     return Results.UnprocessableEntity(new { detail = "User not found." });
 
                 var rolesFromDb = await userManager.GetRolesAsync(user);
-                // *** FIX: Force roles to uppercase before putting in token ***
                 var rolesForToken = rolesFromDb.Select(r => r.ToUpperInvariant()).ToList();
                 Console.WriteLine(
                     $"User {user.UserName} roles (refresh DB): {string.Join(", ", rolesFromDb)} -> For Token: {string.Join(", ", rolesForToken)}"
@@ -248,7 +240,7 @@ public static class AuthEndpoints
                     user.UserName!,
                     user.Id,
                     rolesForToken
-                ); // Pass uppercase roles
+                );
                 var newRefreshToken = jwtTokenService.CreateRefreshToken(
                     Guid.Parse(sessionId),
                     user.Id,
@@ -270,7 +262,7 @@ public static class AuthEndpoints
                     expiresAt
                 );
 
-                var primaryRole = rolesForToken.FirstOrDefault() ?? FleetRoles.FleetUser; // Use uppercase constant
+                var primaryRole = rolesForToken.FirstOrDefault() ?? FleetRoles.FleetUser;
                 var userInfo = new UserInfo(
                     username: user.UserName!,
                     email: user.Email!,

@@ -2,8 +2,8 @@
 import { toast } from "sonner";
 
 export const apiClient = axios.create({
-  baseURL: "https://octopus-app-3t93j.ondigitalocean.app/api",
-  //baseURL: "http://localhost:5006/api",
+  //baseURL: "https://octopus-app-3t93j.ondigitalocean.app/api",
+  baseURL: "http://localhost:5006/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -22,7 +22,6 @@ const onTokenRefreshed = (token: string) => {
   refreshSubscribers = [];
 };
 
-// Add request interceptor for auth token and logging
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -31,8 +30,6 @@ apiClient.interceptors.request.use(
     }
     console.log(
       `🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`,
-      // `\nHeaders:`, config.headers, // Uncomment for detailed header logging
-      // `\nData:`, config.data // Uncomment for detailed data logging
     );
     return config;
   },
@@ -46,17 +43,13 @@ apiClient.interceptors.response.use(
   (response) => {
     console.log(
       `✅ API Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`,
-      // `\nHeaders:`, response.headers, // Uncomment for detailed header logging
-      // `\nData:`, response.data // Uncomment for detailed data logging
     );
-    // Log pagination header if present
     if (response.headers["pagination"]) {
       console.log("📄 Pagination Header:", response.headers["pagination"]);
     }
     return response;
   },
   async (error: AxiosError) => {
-    // Use AxiosError type
     console.error("❌ Response Error Interceptor:", error);
 
     const originalRequest = error.config;
@@ -71,14 +64,12 @@ apiClient.interceptors.response.use(
       console.error("Error setting up request:", error.message);
     }
 
-    // Handle 401 Unauthorized (Token Expired / Invalid)
     if (
       error.response?.status === 401 &&
       originalRequest &&
       !(originalRequest as any)._retry
     ) {
       if (isRefreshing) {
-        // Wait for the new token if refresh is already in progress
         return new Promise((resolve) => {
           subscribeTokenRefresh((token) => {
             if (originalRequest.headers) {
@@ -89,7 +80,7 @@ apiClient.interceptors.response.use(
         });
       }
 
-      (originalRequest as any)._retry = true; // Mark request as retried
+      (originalRequest as any)._retry = true;
       isRefreshing = true;
 
       try {
@@ -126,18 +117,14 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Handle 403 Forbidden (Permission Denied)
     if (error.response?.status === 403) {
       const errorDetail =
         (error.response.data as any)?.detail ||
         "You don't have permission for this action.";
       console.error("Permission Denied (403):", errorDetail);
       toast.error(`Permission Denied: ${errorDetail}`);
-      // let the component handle
-      // return Promise.reject(error); // Or let it fall through
     }
 
-    // Handle 422 Unprocessable Entity (Validation Errors)
     if (error.response?.status === 422) {
       const errorData = error.response.data as any;
       console.error("Validation Error (422):", errorData);
@@ -153,7 +140,6 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Handle other errors (404, 500, Network Error, etc.)
     let errorMessage = "An unexpected error occurred.";
     if (error.response) {
       errorMessage =
@@ -166,12 +152,10 @@ apiClient.interceptors.response.use(
     } else {
       errorMessage = error.message;
     }
-    // Avoid showing redundant 401/403/422 toasts if already handled above
     if (![401, 403, 422].includes(error.response?.status ?? 0)) {
       toast.error(errorMessage);
     }
 
-    // Reject the promise for all other errors
     return Promise.reject(error);
   },
 );

@@ -10,7 +10,6 @@
  line-height: 1.5;
  font-weight: 400;
 
- /* Change to light mode base colors */
  color-scheme: light;
  color: rgba(0, 0, 0, 0.87);
  background-color: #f8f9fa;
@@ -21,12 +20,10 @@
  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Override html class to ensure light mode */
 html {
   background-color: #f8f9fa;
 }
 
-/* Update body styles for light mode */
 body {
   margin: 0;
   min-width: 320px;
@@ -36,7 +33,6 @@ body {
   color: #333;
 }
 
-/* Update button styles for light mode */
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -58,7 +54,6 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-/* For debug sections, ensure visibility */
 .debug-section {
   background-color: #f0f0f0;
   color: #333;
@@ -76,7 +71,6 @@ button:focus-visible {
   color: #555;
 }
 
-/* Apply consistent text colors for all contexts */
 .text-gray-500, .text-gray-600, .text-gray-700, .text-gray-900 {
   color: #6c757d !important;
 }
@@ -85,18 +79,15 @@ button:focus-visible {
   color: #343a40 !important;
 }
 
-/* Ensure all card backgrounds are white */
 .bg-white {
   background-color: white !important;
 }
 
-/* Keep forms and inputs clear */
 input, textarea, select {
   background-color: white !important;
   color: #333 !important;
 }
 
-/* Ensure dark text on any lightest backgrounds */
 .bg-gray-50, .bg-gray-100, .bg-gray-200 {
   color: #333 !important;
 }

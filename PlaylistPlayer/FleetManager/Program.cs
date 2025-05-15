@@ -1,8 +1,6 @@
 using System.Text;
-using System.Text.Json;
 using FleetManager;
 using FleetManager.Data;
-using FleetManager.Data.Entities;
 using FleetManager.Helpers;
 using FleetManager.Services;
 using FluentValidation;
@@ -16,6 +14,7 @@ using FleetManager.Auth.Model;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Results;
 using SharpGrip.FluentValidation.AutoValidation.Shared.Extensions;
+using FleetManager.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,8 +31,8 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod()
             .WithExposedHeaders("Pagination", "Content-Disposition")
-            .SetIsOriginAllowed(origin => true) // For development only
-            .AllowCredentials(); // Keep if you rely on cookies (like RefreshToken)
+            .SetIsOriginAllowed(origin => true)
+            .AllowCredentials();
     });
 });
 
@@ -87,19 +86,46 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-app.UseCors();
-if (!app.Environment.IsEnvironment("Testing")) // "Testing" is what we set in CustomWebApplicationFactory
+if (app.Environment.IsEnvironment("Testing"))
+{
+    app.UseTestHeaderAuthentication();
+    Console.WriteLine(
+        "INFO: TestHeaderAuthenticationMiddleware registered for Testing environment."
+    );
+    // In "Testing" environment, we rely SOLELY on TestHeaderAuthentication.
+    // The standard app.UseAuthentication() might interfere or expect a JWT.
+    // We still need app.UseAuthorization() for [Authorize] attributes to work.
+}
+else
+{
+    app.UseAuthentication(); // Standard JWT authentication for Dev/Prod
+}
+
+if (
+    !app.Environment.IsEnvironment("Testing")
+    || app.Services.GetRequiredService<FleetDbContext>().Database.IsRelational()
+)
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<FleetDbContext>();
-    // Check if the provider is relational before attempting to migrate
-    if (dbContext.Database.IsRelational()) // Add this check
+    if (dbContext.Database.IsRelational())
     {
         dbContext.Database.Migrate();
     }
 }
 
-var dbSeeder = app.Services.CreateScope().ServiceProvider.GetRequiredService<AuthSeeder>(); // Corrected scope usage
+app.UseCors();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<FleetDbContext>();
+    if (dbContext.Database.IsRelational())
+    {
+        dbContext.Database.Migrate();
+    }
+}
+
+var dbSeeder = app.Services.CreateScope().ServiceProvider.GetRequiredService<AuthSeeder>();
 await dbSeeder.SeedAsync();
 
 app.AddVehicleApi();
@@ -134,7 +160,8 @@ app.MapGet(
 
 app.MapControllers();
 app.UseResponseCaching();
-app.UseAuthentication();
+
+//app.UseAuthentication();
 app.UseAuthorization();
 app.Run();
 

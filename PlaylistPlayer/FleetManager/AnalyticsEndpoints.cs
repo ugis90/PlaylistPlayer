@@ -1,12 +1,10 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 using FleetManager.Auth.Model;
 using FleetManager.Data;
 using FleetManager.Services;
-using FleetManager.Helpers;
 
 namespace FleetManager;
 

@@ -1,5 +1,4 @@
-﻿// FleetManager/MaintenanceRecordEndpoints.cs
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +9,6 @@ using FleetManager.Data.Entities;
 using FleetManager.Helpers;
 using System.Text.Json;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
-using System.Collections.Generic;
 
 namespace FleetManager;
 
@@ -18,7 +16,6 @@ public static class MaintenanceRecordEndpoints
 {
     public static void AddMaintenanceRecordApi(this WebApplication app)
     {
-        // *** FIX: Change route group to be under vehicles ***
         var maintenanceGroup = app.MapGroup("/api/vehicles/{vehicleId:int}/maintenanceRecords")
             .AddFluentValidationAutoValidation();
 
@@ -38,9 +35,8 @@ public static class MaintenanceRecordEndpoints
                     var userId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    var isTeenager = httpContext.User.IsInRole(FleetRoles.Teenager);
+                    var isYoungDriver = httpContext.User.IsInRole(FleetRoles.YoungDriver);
 
-                    // Permission check: Can user view records for this vehicle?
                     var vehicle = await dbContext.Vehicles
                         .Include(v => v.User)
                         .AsNoTracking()
@@ -52,14 +48,13 @@ public static class MaintenanceRecordEndpoints
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isOwner = vehicle.UserId == userId;
                     var isFamilyMember =
-                        (isParent || isTeenager)
+                        (isParent || isYoungDriver)
                         && vehicle.User != null
                         && vehicle.User.FamilyGroupId == familyGroupId;
 
                     if (!isAdmin && !isOwner && !isFamilyMember)
                         return Results.Forbid();
 
-                    // *** FIX: Query based on VehicleId ***
                     var queryable = dbContext.MaintenanceRecords
                         .Where(m => m.VehicleId == vehicleId)
                         .AsNoTracking()
@@ -71,7 +66,6 @@ public static class MaintenanceRecordEndpoints
                         searchParams.PageSize!.Value
                     );
 
-                    // *** FIX: Update link generation ***
                     var resources = pagedList
                         .Select(
                             record =>
@@ -92,9 +86,8 @@ public static class MaintenanceRecordEndpoints
                         linkGenerator,
                         httpContext,
                         "GetMaintenanceRecordsForVehicle"
-                    ); // Rename endpoint maybe?
+                    );
 
-                    // *** FIX: Update link generation ***
                     var collectionLinks = CreateLinksForMaintenanceRecords(
                             vehicleId,
                             linkGenerator,
@@ -127,7 +120,7 @@ public static class MaintenanceRecordEndpoints
                     );
                 }
             )
-            .WithName("GetMaintenanceRecordsForVehicle"); // *** FIX: Consider renaming endpoint name ***
+            .WithName("GetMaintenanceRecordsForVehicle");
 
         // GET /{maintenanceRecordId}
         maintenanceGroup
@@ -144,12 +137,11 @@ public static class MaintenanceRecordEndpoints
                     var userId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    var isTeenager = httpContext.User.IsInRole(FleetRoles.Teenager);
+                    var isYoungDriver = httpContext.User.IsInRole(FleetRoles.YoungDriver);
 
-                    // *** FIX: Query based on VehicleId and RecordId ***
                     var record = await dbContext.MaintenanceRecords
                         .Include(m => m.Vehicle)
-                        .ThenInclude(v => v.User) // Include vehicle/user for checks
+                        .ThenInclude(v => v.User)
                         .AsNoTracking()
                         .FirstOrDefaultAsync(
                             m => m.VehicleId == vehicleId && m.Id == maintenanceRecordId
@@ -158,12 +150,11 @@ public static class MaintenanceRecordEndpoints
                     if (record == null)
                         return Results.NotFound("Maintenance record not found");
 
-                    // Permission Check (based on vehicle)
                     var currentUser = await dbContext.Users.FindAsync(userId);
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isVehicleOwner = record.Vehicle.UserId == userId;
                     var isFamilyMember =
-                        (isParent || isTeenager)
+                        (isParent || isYoungDriver)
                         && record.Vehicle.User != null
                         && record.Vehicle.User.FamilyGroupId == familyGroupId;
 
@@ -173,18 +164,18 @@ public static class MaintenanceRecordEndpoints
                     return TypedResults.Ok(record.ToDto());
                 }
             )
-            .WithName("GetMaintenanceRecord"); // Keep name or adjust if needed
+            .WithName("GetMaintenanceRecord");
 
         // POST /
         maintenanceGroup
             .MapPost(
                 "/",
                 [Authorize(
-                    Roles = $"{FleetRoles.Admin},{FleetRoles.Parent},{FleetRoles.FleetUser},{FleetRoles.Teenager}"
+                    Roles = $"{FleetRoles.Admin},{FleetRoles.Parent},{FleetRoles.FleetUser},{FleetRoles.YoungDriver}"
                 )]
                 async (
                     [FromRoute] int vehicleId,
-                    [FromBody] CreateMaintenanceRecordDto dto, // No tripId needed
+                    [FromBody] CreateMaintenanceRecordDto dto,
                     HttpContext httpContext,
                     LinkGenerator linkGenerator,
                     FleetDbContext dbContext
@@ -196,9 +187,8 @@ public static class MaintenanceRecordEndpoints
 
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    var isTeenager = httpContext.User.IsInRole(FleetRoles.Teenager);
+                    var isYoungDriver = httpContext.User.IsInRole(FleetRoles.YoungDriver);
 
-                    // Permission check: Can user add record to this vehicle?
                     var vehicle = await dbContext.Vehicles
                         .Include(v => v.User)
                         .FirstOrDefaultAsync(v => v.Id == vehicleId);
@@ -209,7 +199,7 @@ public static class MaintenanceRecordEndpoints
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isOwner = vehicle.UserId == userId;
                     var isFamilyMember =
-                        (isParent || isTeenager)
+                        (isParent || isYoungDriver)
                         && vehicle.User != null
                         && vehicle.User.FamilyGroupId == familyGroupId;
 
@@ -267,7 +257,6 @@ public static class MaintenanceRecordEndpoints
                         Date = dto.Date.ToUniversalTime(),
                         Provider = dto.Provider ?? string.Empty,
                         NextServiceDue = dto.NextServiceDue?.ToUniversalTime(),
-                        // *** FIX: Assign VehicleId ***
                         VehicleId = vehicleId,
                         CreatedAt = DateTimeOffset.UtcNow,
                         UserId = userId
@@ -276,7 +265,6 @@ public static class MaintenanceRecordEndpoints
                     dbContext.MaintenanceRecords.Add(record);
                     await dbContext.SaveChangesAsync();
 
-                    // *** FIX: Update link generation ***
                     var links = CreateLinksForSingleMaintenanceRecord(
                             vehicleId,
                             record.Id,
@@ -290,12 +278,12 @@ public static class MaintenanceRecordEndpoints
                         httpContext,
                         "GetMaintenanceRecord",
                         new { vehicleId, maintenanceRecordId = record.Id }
-                    ); // Use correct params
+                    );
 
                     return TypedResults.Created(locationUrl, resource);
                 }
             )
-            .WithName("CreateMaintenanceRecordForVehicle"); // *** FIX: Consider renaming endpoint name ***
+            .WithName("CreateMaintenanceRecordForVehicle");
 
         // PUT /{maintenanceRecordId}
         maintenanceGroup
@@ -317,7 +305,6 @@ public static class MaintenanceRecordEndpoints
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
 
-                    // *** FIX: Query based on VehicleId and RecordId, include Vehicle/User ***
                     var record = await dbContext.MaintenanceRecords
                         .Include(m => m.Vehicle)
                         .ThenInclude(v => v.User)
@@ -329,7 +316,6 @@ public static class MaintenanceRecordEndpoints
                     if (record == null)
                         return Results.NotFound("Maintenance record not found");
 
-                    // Permission Check: Admin, Record Creator, or Parent in Vehicle's Family
                     var currentUser = await dbContext.Users.FindAsync(userId);
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isRecordCreator = record.UserId == userId;
@@ -410,7 +396,7 @@ public static class MaintenanceRecordEndpoints
                     return TypedResults.Ok(record.ToDto());
                 }
             )
-            .WithName("UpdateMaintenanceRecord"); // Keep name or adjust
+            .WithName("UpdateMaintenanceRecord");
 
         // DELETE /{maintenanceRecordId}
         maintenanceGroup
@@ -431,7 +417,6 @@ public static class MaintenanceRecordEndpoints
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
 
-                    // *** FIX: Query based on VehicleId and RecordId ***
                     var record = await dbContext.MaintenanceRecords
                         .Include(m => m.Vehicle)
                         .ThenInclude(v => v.User)
@@ -443,7 +428,6 @@ public static class MaintenanceRecordEndpoints
                     if (record == null)
                         return Results.NotFound("Maintenance record not found");
 
-                    // Permission Check
                     var currentUser = await dbContext.Users.FindAsync(userId);
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isRecordCreator = record.UserId == userId;
@@ -460,10 +444,9 @@ public static class MaintenanceRecordEndpoints
                     return Results.NoContent();
                 }
             )
-            .WithName("DeleteMaintenanceRecord"); // Keep name or adjust
+            .WithName("DeleteMaintenanceRecord");
     }
 
-    // --- Helper Methods for Links --- (Updated)
     private static IEnumerable<LinkDto> CreateLinksForSingleMaintenanceRecord(
         int vehicleId,
         int maintenanceRecordId,
@@ -498,7 +481,6 @@ public static class MaintenanceRecordEndpoints
             "delete",
             "DELETE"
         );
-        // Link back to the vehicle
         yield return new LinkDto(
             linkGenerator.GetUriByName(httpContext, "GetVehicle", new { vehicleId }),
             "vehicle",

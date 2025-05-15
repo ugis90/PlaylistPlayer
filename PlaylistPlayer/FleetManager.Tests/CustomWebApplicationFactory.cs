@@ -22,21 +22,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 options.UseInMemoryDatabase(dbName);
             });
 
-            services
-                .AddAuthentication(options =>
-                {
-                    options.DefaultAuthenticateScheme = TestAuthHandler.AuthenticationScheme;
-                    options.DefaultChallengeScheme = TestAuthHandler.AuthenticationScheme;
-                    options.DefaultScheme = TestAuthHandler.AuthenticationScheme;
-                })
-                .AddScheme<TestAuthHandlerOptions, TestAuthHandler>(
-                    TestAuthHandler.AuthenticationScheme,
-                    options => { }
-                );
-
             services.AddAuthorizationCore();
         });
-
         builder.UseEnvironment("Testing");
     }
 }

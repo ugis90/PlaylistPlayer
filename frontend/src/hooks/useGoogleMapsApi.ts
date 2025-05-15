@@ -1,5 +1,4 @@
-﻿// src/hooks/useGoogleMapsApi.ts
-import { useState, useEffect, useRef, useCallback } from "react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 
 let mapsApiLoaded = typeof window !== "undefined" && !!window.google?.maps;
@@ -12,17 +11,15 @@ export function useGoogleMapsApi() {
 
   useEffect(() => {
     isMounted.current = true;
-    // If already loaded when hook mounts, ensure state is true
     if (mapsApiLoaded && !isLoaded) {
       setIsLoaded(true);
     }
     return () => {
       isMounted.current = false;
     };
-  }, [isLoaded]); // Re-sync if isLoaded changes externally somehow
+  }, [isLoaded]);
 
   const loadScript = useCallback((): Promise<boolean> => {
-    // Return existing promise if loading or already loaded
     if (mapsApiLoadPromise) return mapsApiLoadPromise;
     if (mapsApiLoaded) {
       if (!isLoaded && isMounted.current) setIsLoaded(true);
@@ -51,9 +48,8 @@ export function useGoogleMapsApi() {
             resolve(true);
             mapsApiLoadPromise = null;
           }
-          // Add a timeout mechanism here if needed to prevent infinite checks
-        }, 100); // Check every 100ms
-        return; // Don't add another script tag
+        }, 100);
+        return;
       }
 
       const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -92,7 +88,7 @@ export function useGoogleMapsApi() {
     });
 
     return mapsApiLoadPromise;
-  }, [isLoaded]); // Recreate loadScript if isLoaded changes
+  }, [isLoaded]);
 
   return { isLoaded, loadScript, error };
 }

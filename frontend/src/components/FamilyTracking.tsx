@@ -1,5 +1,4 @@
-﻿// src/components/FamilyTracking.tsx
-import React, { useState, useEffect, useRef, useCallback } from "react";
+﻿import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -73,20 +72,17 @@ const FamilyTracking: React.FC = () => {
     error: mapApiError,
   } = useGoogleMapsApi();
 
-  // Refs for direct map manipulation
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<Map<string, google.maps.Marker>>(new Map());
 
   const hasViewAccess =
     userInfo?.role === "ADMIN" || userInfo?.role === "PARENT";
 
-  // --- Logging ---
   const addToDebugLog = useCallback((message: string) => {
     if (!isMounted.current) return;
     console.log(`[Family Tracking] ${message}`);
   }, []);
 
-  // --- Map Marker Update Logic ---
   const updateMapMarkers = useCallback(() => {
     if (!mapInstanceRef.current || !window.google?.maps || !isMounted.current) {
       addToDebugLog(
@@ -105,14 +101,13 @@ const FamilyTracking: React.FC = () => {
 
     familyMembers.forEach((member) => {
       if (!member.location) {
-        // If member previously had a marker, remove it
         const existingMarker = markersRef.current.get(member.id);
         if (existingMarker) {
           existingMarker.setMap(null);
           markersRef.current.delete(member.id);
           addToDebugLog(`Removed marker for ${member.name} (no location).`);
         }
-        return; // Skip members without location
+        return;
       }
 
       const position = {
@@ -122,7 +117,6 @@ const FamilyTracking: React.FC = () => {
       const existingMarker = markersRef.current.get(member.id);
 
       if (existingMarker) {
-        // Only update position if it actually changed (optimization)
         const currentPosition = existingMarker.getPosition?.();
         if (
           !currentPosition ||
@@ -132,14 +126,12 @@ const FamilyTracking: React.FC = () => {
           existingMarker.setPosition(position);
           markersUpdated++;
         }
-        // Update InfoWindow content
         const infoWindow = (existingMarker as any).get?.("infoWindow");
         if (infoWindow) {
           const infoContent = `<div><h3>${member.name} (${member.role})</h3><p>Speed: ${getSpeed(member)}</p><p>Last: ${getTimeSinceUpdate(member.location.timestamp)}</p></div>`;
           infoWindow.setContent(infoContent);
         }
       } else {
-        // Create new marker
         try {
           const marker = new window.google.maps.Marker({
             position,
@@ -175,10 +167,9 @@ const FamilyTracking: React.FC = () => {
           addToDebugLog(`Error creating marker for ${member.name}`);
         }
       }
-      currentMarkerIds.delete(member.id); // Mark as processed
+      currentMarkerIds.delete(member.id);
     });
 
-    // Remove markers for members no longer in the list
     let markersRemoved = 0;
     currentMarkerIds.forEach((markerId) => {
       const markerToRemove = markersRef.current.get(markerId);
@@ -196,7 +187,6 @@ const FamilyTracking: React.FC = () => {
       `Map Markers Update: ${markersCreated} created, ${markersUpdated} updated, ${markersRemoved} removed.`,
     );
 
-    // Center map logic - but only if the user explicitly selected a member
     if (selectedMember?.location && mapInstanceRef.current) {
       mapInstanceRef.current.panTo({
         lat: selectedMember.location.latitude,
@@ -208,7 +198,6 @@ const FamilyTracking: React.FC = () => {
       mapInstanceRef.current &&
       !selectedMember
     ) {
-      // Fit bounds only if multiple markers exist and no specific member is selected
       if (markersRef.current.size > 1) {
         const bounds = new window.google.maps.LatLngBounds();
         markersRef.current.forEach((marker) => {
@@ -217,13 +206,12 @@ const FamilyTracking: React.FC = () => {
         });
         mapInstanceRef.current.fitBounds(bounds);
       } else if (markersRef.current.size === 1) {
-        // Center on the single marker
         const firstMarker = markersRef.current.values().next().value;
         if (firstMarker) {
           const position = firstMarker.getPosition?.();
           if (position) mapInstanceRef.current.setCenter(position);
         }
-        mapInstanceRef.current.setZoom(14); // Zoom in a bit for single marker
+        mapInstanceRef.current.setZoom(14);
       }
     }
   }, [familyMembers, selectedMember, addToDebugLog]);
@@ -233,7 +221,6 @@ const FamilyTracking: React.FC = () => {
       addToDebugLog("Map instance loaded from wrapper.");
       mapInstanceRef.current = mapInstance;
 
-      // Create markers with a slight delay to ensure map is fully ready
       setTimeout(() => {
         if (isMounted.current && mapInstanceRef.current) {
           updateMapMarkers();
@@ -243,7 +230,6 @@ const FamilyTracking: React.FC = () => {
     [addToDebugLog, updateMapMarkers],
   );
 
-  // --- Effects ---
   useEffect(() => {
     isMounted.current = true;
     if (!hasViewAccess) {
@@ -258,14 +244,12 @@ const FamilyTracking: React.FC = () => {
       if (refreshTimerRef.current)
         window.clearInterval(refreshTimerRef.current);
 
-      // Clean up all markers on unmount
       markersRef.current.forEach((m) => m.setMap(null));
       markersRef.current.clear();
       mapInstanceRef.current = null;
     };
   }, [refreshInterval, hasViewAccess, navigate]);
 
-  // Load map script if needed when map is opened
   useEffect(() => {
     if (isMapOpen && !isMapsApiLoaded && !mapApiError) {
       loadMapsScript().catch((err) =>
@@ -274,15 +258,12 @@ const FamilyTracking: React.FC = () => {
     }
   }, [isMapOpen, isMapsApiLoaded, loadMapsScript, mapApiError]);
 
-  // Update markers when family members data changes
   useEffect(() => {
     if (isMapOpen && mapInstanceRef.current && isMapsApiLoaded) {
-      // Only update markers if the map is visible
       updateMapMarkers();
     }
   }, [familyMembers, isMapOpen, isMapsApiLoaded, updateMapMarkers]);
 
-  // Update markers when selected member changes
   useEffect(() => {
     if (
       isMapOpen &&
@@ -290,7 +271,6 @@ const FamilyTracking: React.FC = () => {
       isMapsApiLoaded &&
       selectedMember
     ) {
-      // Focus on the selected member
       if (selectedMember.location) {
         mapInstanceRef.current.panTo({
           lat: selectedMember.location.latitude,
@@ -303,7 +283,6 @@ const FamilyTracking: React.FC = () => {
 
   const fetchFamilyMembers = async () => {
     if (!isMounted.current) return;
-    // Only set loading on initial fetch
     if (familyMembers.length === 0) setIsLoading(true);
     try {
       const usersResponse =
@@ -343,13 +322,10 @@ const FamilyTracking: React.FC = () => {
         );
       }
 
-      // TODO: Fetch vehicles/trips if needed
-
       if (isMounted.current) {
         setFamilyMembers(fetchedUsers);
         setLastRefresh(new Date());
 
-        // Update markers if map is already open
         if (isMapOpen && mapInstanceRef.current) {
           updateMapMarkers();
         }
@@ -379,12 +355,8 @@ const FamilyTracking: React.FC = () => {
     switch (role?.toUpperCase()) {
       case "PARENT":
         return "#4285F4";
-      case "TEENAGER":
+      case "YOUNGDRIVER":
         return "#EA4335";
-      case "SPOUSE":
-        return "#34A853";
-      case "FLEETUSER":
-        return "#FBBC05";
       case "ADMIN":
         return "#7E57C2";
       default:
@@ -416,10 +388,9 @@ const FamilyTracking: React.FC = () => {
   };
 
   function getSpeed(member: FamilyMember): string {
-    if (member.location?.speed === null || member.location?.speed === undefined)
-      return "N/A";
-    const speedMph = Math.round(member.location.speed * 2.237);
-    return `${speedMph} mph`;
+    if (member.location?.speed == null) return "N/A";
+    const speedKmh = Math.round(member.location.speed * 3.6);
+    return `${speedKmh} km/h`;
   }
 
   const isMoving = (member: FamilyMember): boolean =>
@@ -444,9 +415,7 @@ const FamilyTracking: React.FC = () => {
     return `${Math.floor(hours / 24)}d ago`;
   }
 
-  // Render loading or error state first
   if (isLoading && familyMembers.length === 0) {
-    // Show loading only on initial load
     return (
       <div className="p-6 text-center">
         <Loader className="h-8 w-8 animate-spin mx-auto text-blue-500" />{" "}
@@ -455,7 +424,6 @@ const FamilyTracking: React.FC = () => {
     );
   }
 
-  // If not loading but still no access (e.g., userInfo loaded late)
   if (!hasViewAccess) {
     return (
       <div className="p-6 text-center text-red-600">
@@ -464,7 +432,6 @@ const FamilyTracking: React.FC = () => {
     );
   }
 
-  // Get map center coordinates based on selected member or first family member
   const getMapCenter = () => {
     if (selectedMember?.location) {
       return {
@@ -480,7 +447,6 @@ const FamilyTracking: React.FC = () => {
         };
       }
     }
-    // Default to New York
     return { lat: 40.7128, lng: -74.006 };
   };
 
@@ -707,7 +673,7 @@ const FamilyTracking: React.FC = () => {
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     {member.vehicle.licensePlate} •{" "}
-                    {member.vehicle.currentMileage?.toLocaleString()} miles
+                    {member.vehicle.currentMileage?.toLocaleString()} km
                   </p>
                 </div>
               )}
@@ -725,7 +691,7 @@ const FamilyTracking: React.FC = () => {
                     </div>
                     <div className="flex justify-between text-gray-600 mt-1">
                       <span>
-                        {member.currentTrip.distance?.toFixed(1) || "0"} miles
+                        {member.currentTrip.distance?.toFixed(1) || "0"} km
                       </span>
                       <span>{formatTripDuration(member.currentTrip)}</span>
                     </div>

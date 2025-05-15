@@ -1,5 +1,4 @@
-﻿// FleetManager/FuelRecordEndpoints.cs
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +9,6 @@ using FleetManager.Data.Entities;
 using FleetManager.Helpers;
 using System.Text.Json;
 using SharpGrip.FluentValidation.AutoValidation.Endpoints.Extensions;
-using System.Collections.Generic; // Required for Dictionary
 
 namespace FleetManager;
 
@@ -37,7 +35,7 @@ public static class FuelRecordEndpoints
                     var userId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    var isTeenager = httpContext.User.IsInRole(FleetRoles.Teenager);
+                    var isYoungDriver = httpContext.User.IsInRole(FleetRoles.YoungDriver);
 
                     var vehicle = await dbContext.Vehicles
                         .Include(v => v.User)
@@ -50,7 +48,7 @@ public static class FuelRecordEndpoints
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isOwner = vehicle.UserId == userId;
                     var isFamilyMember =
-                        (isParent || isTeenager)
+                        (isParent || isYoungDriver)
                         && vehicle.User != null
                         && vehicle.User.FamilyGroupId == familyGroupId;
 
@@ -132,7 +130,7 @@ public static class FuelRecordEndpoints
                     var userId = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    var isTeenager = httpContext.User.IsInRole(FleetRoles.Teenager);
+                    var isYoungDriver = httpContext.User.IsInRole(FleetRoles.YoungDriver);
 
                     var record = await dbContext.FuelRecords
                         .Include(f => f.Vehicle)
@@ -147,7 +145,7 @@ public static class FuelRecordEndpoints
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isVehicleOwner = record.Vehicle.UserId == userId;
                     var isFamilyMember =
-                        (isParent || isTeenager)
+                        (isParent || isYoungDriver)
                         && record.Vehicle.User != null
                         && record.Vehicle.User.FamilyGroupId == familyGroupId;
 
@@ -164,7 +162,7 @@ public static class FuelRecordEndpoints
             .MapPost(
                 "/",
                 [Authorize(
-                    Roles = $"{FleetRoles.Admin},{FleetRoles.Parent},{FleetRoles.FleetUser},{FleetRoles.Teenager}"
+                    Roles = $"{FleetRoles.Admin},{FleetRoles.Parent},{FleetRoles.FleetUser},{FleetRoles.YoungDriver}"
                 )]
                 async (
                     [FromRoute] int vehicleId,
@@ -180,7 +178,7 @@ public static class FuelRecordEndpoints
 
                     var isAdmin = httpContext.User.IsInRole(FleetRoles.Admin);
                     var isParent = httpContext.User.IsInRole(FleetRoles.Parent);
-                    var isTeenager = httpContext.User.IsInRole(FleetRoles.Teenager);
+                    var isYoungDriver = httpContext.User.IsInRole(FleetRoles.YoungDriver);
 
                     var vehicle = await dbContext.Vehicles
                         .Include(v => v.User)
@@ -192,7 +190,7 @@ public static class FuelRecordEndpoints
                     var familyGroupId = currentUser?.FamilyGroupId;
                     var isOwner = vehicle.UserId == userId;
                     var isFamilyMember =
-                        (isParent || isTeenager)
+                        (isParent || isYoungDriver)
                         && vehicle.User != null
                         && vehicle.User.FamilyGroupId == familyGroupId;
 
@@ -223,18 +221,18 @@ public static class FuelRecordEndpoints
                                 { "mileage", new[] { "Mileage cannot be negative." } }
                             }
                         );
-                    if (dto.Gallons <= 0)
+                    if (dto.Liters <= 0)
                         return Results.ValidationProblem(
                             new Dictionary<string, string[]>
                             {
-                                { "gallons", new[] { "Gallons must be positive." } }
+                                { "Liters", new[] { "Liters must be positive." } }
                             }
                         );
-                    if (dto.CostPerGallon <= 0)
+                    if (dto.CostPerLiter <= 0)
                         return Results.ValidationProblem(
                             new Dictionary<string, string[]>
                             {
-                                { "costPerGallon", new[] { "Cost per gallon must be positive." } }
+                                { "CostPerLiter", new[] { "Cost per gallon must be positive." } }
                             }
                         );
                     if (dto.TotalCost < 0)
@@ -248,8 +246,8 @@ public static class FuelRecordEndpoints
                     var record = new FuelRecord
                     {
                         Date = dto.Date.ToUniversalTime(),
-                        Gallons = dto.Gallons,
-                        CostPerGallon = dto.CostPerGallon,
+                        Liters = dto.Liters,
+                        CostPerLiter = dto.CostPerLiter,
                         TotalCost = dto.TotalCost,
                         Mileage = dto.Mileage,
                         Station = dto.Station ?? string.Empty,
@@ -327,20 +325,18 @@ public static class FuelRecordEndpoints
                     if (!isAdmin && !isRecordCreator && !isParentInFamily)
                         return Results.Forbid();
 
-                    // --- Start Filled-in Update Logic ---
-                    // Update record properties if provided in DTO
-                    bool recalculateCostPerGallon = false;
-                    if (dto.Gallons.HasValue)
+                    bool recalculateCostPerLiter = false;
+                    if (dto.Liters.HasValue)
                     {
-                        if (dto.Gallons.Value <= 0)
+                        if (dto.Liters.Value <= 0)
                             return Results.ValidationProblem(
                                 new Dictionary<string, string[]>
                                 {
-                                    { "gallons", new[] { "Gallons must be positive." } }
+                                    { "Liters", new[] { "Liters must be positive." } }
                                 }
                             );
-                        record.Gallons = dto.Gallons.Value;
-                        recalculateCostPerGallon = true; // Need to recalculate if gallons changed
+                        record.Liters = dto.Liters.Value;
+                        recalculateCostPerLiter = true;
                     }
                     if (dto.TotalCost.HasValue)
                     {
@@ -352,20 +348,18 @@ public static class FuelRecordEndpoints
                                 }
                             );
                         record.TotalCost = dto.TotalCost.Value;
-                        recalculateCostPerGallon = true; // Need to recalculate if total cost changed
+                        recalculateCostPerLiter = true;
                     }
 
-                    // Recalculate CostPerGallon if Gallons and TotalCost are valid and either changed
-                    if (recalculateCostPerGallon && record.Gallons > 0 && record.TotalCost >= 0)
+                    if (recalculateCostPerLiter && record.Liters > 0 && record.TotalCost >= 0)
                     {
-                        record.CostPerGallon = record.TotalCost / (decimal)record.Gallons;
+                        record.CostPerLiter = record.TotalCost / (decimal)record.Liters;
                     }
 
                     if (dto.Station != null)
-                        record.Station = dto.Station; // Allow empty string
+                        record.Station = dto.Station;
                     if (dto.FullTank.HasValue)
                         record.FullTank = dto.FullTank.Value;
-                    // --- End Filled-in Update Logic ---
 
                     await dbContext.SaveChangesAsync();
                     return TypedResults.Ok(record.ToDto());
@@ -420,7 +414,6 @@ public static class FuelRecordEndpoints
             .WithName("DeleteFuelRecord");
     }
 
-    // --- Helper Methods for Links ---
     private static IEnumerable<LinkDto> CreateLinksForSingleFuelRecord(
         int vehicleId,
         int fuelRecordId,

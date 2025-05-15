@@ -1,4 +1,5 @@
-﻿// src/types/index.ts
+﻿import React from "react";
+
 export interface StatsCard {
   title: string;
   value: number | string;
@@ -9,7 +10,7 @@ export interface ChartData {
   name: string;
   fuel?: number;
   maintenance?: number;
-  mpg?: number;
+  L100km?: number;
 }
 
 export interface Vehicle {
@@ -44,18 +45,18 @@ export interface MaintenanceRecord {
   description: string;
   cost: number;
   mileage: number;
-  date: string; // Keep as string (ISO format from API)
+  date: string;
   provider: string;
-  nextServiceDue: string | null; // Keep as string or null
+  nextServiceDue: string | null;
   createdOn: string;
-  vehicleId: number; // ADD this
+  vehicleId: number;
 }
 
 export interface FuelRecord {
   id: number;
   date: string;
-  gallons: number;
-  costPerGallon: number;
+  liters: number;
+  costPerLiter: number;
   totalCost: number;
   mileage: number;
   station: string;
@@ -71,4 +72,14 @@ export interface Pagination {
   totalCount: number;
   hasPrevious: boolean;
   hasNext: boolean;
+}
+
+export interface VehicleAnalytics {
+  mileage: number;
+  costPerKm: number;
+  fuelEfficiencyLitersPer100Km: number;
+}
+export interface FuelEfficiencyTrendDto {
+  date: string;
+  litersPer100Km: number;
 }

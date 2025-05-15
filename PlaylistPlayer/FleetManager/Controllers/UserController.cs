@@ -1,5 +1,4 @@
-﻿// FleetManager/Controllers/UserController.cs
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using FleetManager.Auth.Model;
 using FleetManager.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -7,9 +6,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 using FleetManager.Data.Entities;
 
 namespace FleetManager.Controllers;
@@ -37,16 +33,14 @@ public class UserController(UserManager<FleetUser> userManager, FleetDbContext d
             bool isAdmin = User.IsInRole(FleetRoles.Admin);
             string? familyGroupId = currentUser.FamilyGroupId;
 
-            // Admins see all, Parents see their family. Parents MUST have a group ID.
             if (!isAdmin && string.IsNullOrEmpty(familyGroupId))
             {
                 Console.WriteLine(
                     $"User {currentUser.UserName} is Parent/Other but has no FamilyGroupId."
                 );
-                return Ok(new List<object>()); // Or return BadRequest?
+                return Ok(new List<object>());
             }
 
-            // 1. Get all relevant user IDs first
             List<string> userIdsInScope;
             if (isAdmin)
             {
@@ -62,10 +56,9 @@ public class UserController(UserManager<FleetUser> userManager, FleetDbContext d
 
             if (!userIdsInScope.Any())
             {
-                return Ok(new List<object>()); // No users found
+                return Ok(new List<object>());
             }
 
-            // 2. Get basic user info for these IDs
             var usersInfo = await dbContext.Users
                 .Where(u => userIdsInScope.Contains(u.Id))
                 .Select(
@@ -76,19 +69,18 @@ public class UserController(UserManager<FleetUser> userManager, FleetDbContext d
                             u.UserName,
                             u.Email
                         }
-                ) // Select only needed scalar properties
+                )
                 .ToListAsync();
 
-            // 3. Get latest locations for these IDs in a separate query
             var latestLocations = await dbContext.UserLocations
                 .Where(l => userIdsInScope.Contains(l.UserId))
                 .GroupBy(l => l.UserId)
-                .Select(g => g.OrderByDescending(l => l.Timestamp).First()) // Get latest per user
+                .Select(g => g.OrderByDescending(l => l.Timestamp).First())
                 .ToDictionaryAsync(
                     l => l.UserId,
                     l =>
                         new
-                        { // Select needed fields
+                        {
                             l.Latitude,
                             l.Longitude,
                             l.Timestamp,
@@ -97,16 +89,15 @@ public class UserController(UserManager<FleetUser> userManager, FleetDbContext d
                         }
                 );
 
-            // 4. Combine data and get roles individually
             var familyMembersData = new List<object>();
             foreach (var userInfo in usersInfo)
             {
-                var user = await userManager.FindByIdAsync(userInfo.Id); // Need full user for GetRolesAsync
+                var user = await userManager.FindByIdAsync(userInfo.Id);
                 if (user == null)
-                    continue; // Should not happen, but safety check
+                    continue;
 
                 var roles = await userManager.GetRolesAsync(user);
-                latestLocations.TryGetValue(userInfo.Id, out var lastLocation); // Get location from dictionary
+                latestLocations.TryGetValue(userInfo.Id, out var lastLocation);
 
                 familyMembersData.Add(
                     new
@@ -115,7 +106,7 @@ public class UserController(UserManager<FleetUser> userManager, FleetDbContext d
                         userInfo.UserName,
                         userInfo.Email,
                         Roles = roles,
-                        LastLocation = lastLocation // Can be null
+                        LastLocation = lastLocation
                     }
                 );
             }
@@ -124,7 +115,7 @@ public class UserController(UserManager<FleetUser> userManager, FleetDbContext d
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error in GetFamilyMembers: {ex.ToString()}"); // Log full exception
+            Console.WriteLine($"Error in GetFamilyMembers: {ex.ToString()}");
             return StatusCode(
                 500,
                 "An internal server error occurred while fetching family members."
@@ -132,7 +123,6 @@ public class UserController(UserManager<FleetUser> userManager, FleetDbContext d
         }
     }
 
-    // GetFamilyLocations - Keep the previous version, it seemed okay
     [HttpGet("locations")]
     [Authorize(Roles = $"{FleetRoles.Admin},{FleetRoles.Parent}")]
     public async Task<IActionResult> GetFamilyLocations()
@@ -155,12 +145,12 @@ public class UserController(UserManager<FleetUser> userManager, FleetDbContext d
                 familyGroupId = currentUser.FamilyGroupId;
                 if (string.IsNullOrEmpty(familyGroupId))
                 {
-                    return Ok(new List<object>()); // No family group, no locations to show
+                    return Ok(new List<object>());
                 }
             }
 
             IQueryable<UserLocation> locationQuery = dbContext.UserLocations
-                .Include(l => l.User) // Needed for filtering
+                .Include(l => l.User)
                 .OrderByDescending(l => l.Timestamp);
 
             if (!isAdmin)
@@ -182,7 +172,6 @@ public class UserController(UserManager<FleetUser> userManager, FleetDbContext d
         }
     }
 
-    // InviteUserToFamily - Keep the previous version
     [HttpPost("invite")]
     [Authorize(Roles = $"{FleetRoles.Admin},{FleetRoles.Parent}")]
     public async Task<IActionResult> InviteUserToFamily([FromBody] InviteUserDto dto)

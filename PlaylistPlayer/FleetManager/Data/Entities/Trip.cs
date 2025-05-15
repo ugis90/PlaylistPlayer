@@ -1,7 +1,5 @@
-﻿// FleetManager/Data/Entities/Trip.cs
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using FleetManager.Auth.Model;
-using System.Collections.Generic; // Keep if other collections exist
 
 namespace FleetManager.Data.Entities;
 
@@ -20,12 +18,9 @@ public class Trip
     public int VehicleId { get; set; }
     public Vehicle Vehicle { get; set; } = null!;
 
-    // --- Removed Maintenance Records Relationship ---
-    // public ICollection<MaintenanceRecord> MaintenanceRecords { get; set; } = new List<MaintenanceRecord>();
-
     [Required]
     public required string UserId { get; set; }
-    public FleetUser User { get; set; } = null!; // Ensure User is not null
+    public FleetUser User { get; set; } = null!;
 
     public TripDto ToDto()
     {

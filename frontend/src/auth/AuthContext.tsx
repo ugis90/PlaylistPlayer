@@ -1,5 +1,4 @@
-﻿// src/auth/AuthContext.tsx
-import {
+﻿import {
   createContext,
   useContext,
   useState,
@@ -13,7 +12,7 @@ import { toast } from "sonner";
 interface UserInfo {
   username: string;
   email: string;
-  role: string; // Expecting Uppercase role
+  role: string;
 }
 
 interface AuthContextType {
@@ -40,7 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUserInfo = localStorage.getItem("userInfo");
     try {
       const parsed = storedUserInfo ? JSON.parse(storedUserInfo) : null;
-      // Ensure role is uppercase when loading from storage too
       if (parsed?.role) {
         parsed.role = parsed.role.toUpperCase();
       }
@@ -61,7 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated]);
 
-  // --- Updated hasRole with Logging ---
   const hasRole = useCallback(
     (roleOrRoles: string | string[]): boolean => {
       const requiredRoles = Array.isArray(roleOrRoles)
@@ -69,7 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         : [roleOrRoles];
       const requiredRolesUpper = requiredRoles.map((r) => r.toUpperCase());
 
-      // Log the check being performed
       console.log(
         `hasRole Check: User Role='${userInfo?.role ?? "N/A"}', Required Roles='${JSON.stringify(requiredRolesUpper)}'`,
       );
@@ -79,7 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      // Assume userInfo.role is already uppercase from login/refresh
       const userRoleUpper = userInfo.role;
 
       const result = requiredRolesUpper.includes(userRoleUpper);
@@ -88,7 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [userInfo],
   );
-  // --- End Updated hasRole ---
 
   const login = async (
     username: string,
@@ -125,10 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (apiUserInfo) {
-        // *** Ensure role is uppercase when setting state ***
         apiUserInfo.role = apiUserInfo.role.toUpperCase();
         localStorage.setItem("userInfo", JSON.stringify(apiUserInfo));
-        setUserInfo(apiUserInfo); // Update state
+        setUserInfo(apiUserInfo);
         setIsAuthenticated(true);
         toast.success(`Logged in successfully as ${apiUserInfo.role}`);
         console.log("User Info after login:", apiUserInfo);
@@ -162,16 +155,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("token", accessToken);
       apiClient.defaults.headers.common["Authorization"] =
         `Bearer ${accessToken}`;
-      // *** Ensure role is uppercase when setting state ***
       refreshedUserInfo.role = refreshedUserInfo.role.toUpperCase();
       localStorage.setItem("userInfo", JSON.stringify(refreshedUserInfo));
-      setUserInfo(refreshedUserInfo); // Update state
+      setUserInfo(refreshedUserInfo);
       setIsAuthenticated(true);
     } catch (error) {
       console.error("Token refresh error:", error);
-      await logout(); // Logout if refresh fails
-      // Don't re-throw here, let the original request that triggered refresh fail naturally
-      // throw error;
+      await logout();
     }
   };
 
@@ -192,8 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(false);
       toast.info("Logged out");
       console.log("Client-side logout completed.");
-      // Force navigation to login after state updates
-      window.location.href = "/login"; // Consider this for definite redirect
+      window.location.href = "/login";
     }
   };
 

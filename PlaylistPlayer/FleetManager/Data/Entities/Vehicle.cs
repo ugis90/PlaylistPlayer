@@ -1,7 +1,5 @@
-﻿// FleetManager/Data/Entities/Vehicle.cs
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using FleetManager.Auth.Model;
-using System.Collections.Generic; // Add this
 
 namespace FleetManager.Data.Entities;
 
@@ -20,13 +18,12 @@ public class Vehicle
     public ICollection<Trip> Trips { get; set; } = new List<Trip>();
     public ICollection<FuelRecord> FuelRecords { get; set; } = new List<FuelRecord>();
 
-    // --- Added Maintenance Records Relationship ---
     public ICollection<MaintenanceRecord> MaintenanceRecords { get; set; } =
         new List<MaintenanceRecord>();
 
     [Required]
     public required string UserId { get; set; }
-    public FleetUser User { get; set; } = null!; // Ensure User is not null
+    public FleetUser User { get; set; } = null!;
 
     public VehicleDto ToDto()
     {

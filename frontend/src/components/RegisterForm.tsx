@@ -1,5 +1,4 @@
-﻿// src/components/RegisterForm.tsx
-import { useState } from "react";
+﻿import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -19,21 +18,21 @@ export function RegisterForm() {
     email: "",
     password: "",
   });
-  const [role, setRole] = useState("FleetUser"); // Default role
+  const [role, setRole] = useState("FleetUser");
   const [isLoading, setIsLoading] = useState(false);
-  const [apiErrors, setApiErrors] = useState<Record<string, string[]>>({}); // Store API validation errors
+  const [apiErrors, setApiErrors] = useState<Record<string, string[]>>({});
 
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setApiErrors({}); // Clear previous errors
+    setApiErrors({});
 
     try {
       const registrationData = {
         ...formData,
-        role: role, // Send the selected role
+        role: role,
       };
 
       console.log("Sending registration data:", registrationData);
@@ -48,9 +47,7 @@ export function RegisterForm() {
       const errorData: ApiError = err.response?.data || {};
 
       if (err.response?.status === 422 && errorData.errors) {
-        // Handle validation errors from the API
         setApiErrors(errorData.errors);
-        // Show a general validation error toast
         toast.error(errorData.title || "Please fix the errors below.");
       } else if (errorData.detail) {
         toast.error(errorData.detail);
@@ -75,12 +72,12 @@ export function RegisterForm() {
             setFormData({ ...formData, userName: e.target.value });
             setApiErrors((prev) => {
               const next = { ...prev };
-              delete next.UserName; // Delete the key
+              delete next.UserName;
               return next;
             });
           }}
           placeholder="Choose a username"
-          error={apiErrors.UserName?.[0]} // Display API error for username
+          error={apiErrors.UserName?.[0]}
           required
         />
 
@@ -92,12 +89,12 @@ export function RegisterForm() {
             setFormData({ ...formData, email: e.target.value });
             setApiErrors((prev) => {
               const next = { ...prev };
-              delete next.UserName; // Delete the key
+              delete next.UserName;
               return next;
             });
           }}
           placeholder="Your email address"
-          error={apiErrors.Email?.[0]} // Display API error for email
+          error={apiErrors.Email?.[0]}
           required
         />
 
@@ -109,7 +106,7 @@ export function RegisterForm() {
             setFormData({ ...formData, password: e.target.value });
             setApiErrors((prev) => {
               const next = { ...prev };
-              delete next.UserName; // Delete the key
+              delete next.UserName;
               return next;
             });
           }}
@@ -121,9 +118,9 @@ export function RegisterForm() {
             apiErrors.PasswordRequiresNonAlphanumeric?.[0] ||
             apiErrors.PasswordRequiresUpper?.[0] ||
             apiErrors.PasswordTooShort?.[0]
-          } // Display API password errors
+          }
           required
-          minLength={8} // Basic client-side check
+          minLength={8}
         />
 
         {/* Role Selection */}
@@ -134,29 +131,22 @@ export function RegisterForm() {
             setRole(e.target.value);
             setApiErrors((prev) => {
               const next = { ...prev };
-              delete next.UserName; // Delete the key
+              delete next.UserName;
               return next;
             });
           }}
-          error={apiErrors.Role?.[0]} // Display API error for role
+          error={apiErrors.Role?.[0]}
         >
-          <option value="FleetUser">Regular User</option>
           <option value="Parent">Parent</option>
-          <option value="Teenager">Teenager</option>
-          {/* Optionally hide Admin role unless needed */}
-          {/* <option value="Admin">Administrator</option> */}
+          <option value="YOUNGDRIVER">Young Driver</option>
         </Select>
         <div className="mt-2 text-xs text-gray-500 space-y-1">
           <p>
             <strong>Parent:</strong> Can track family members & manage vehicles.
           </p>
           <p>
-            <strong>Teenager:</strong> Limited access, location trackable by
+            <strong>Young Driver:</strong> Limited access, location trackable by
             parents.
-          </p>
-          <p>
-            <strong>Regular User:</strong> Standard access to own
-            vehicles/trips.
           </p>
         </div>
 

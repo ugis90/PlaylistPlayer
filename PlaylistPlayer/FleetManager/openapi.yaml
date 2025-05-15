@@ -577,8 +577,8 @@ paths:
                   - resource:
                       id: 1
                       date: "2024-03-10T14:30:00Z"
-                      gallons: 12.5
-                      costPerGallon: 3.45
+                      Liters: 12.5
+                      costPerLiter: 3.45
                       totalCost: 43.13
                       mileage: 14500
                       station: "Shell"
@@ -609,8 +609,8 @@ paths:
               $ref: "#/components/schemas/createFuelRecord"
             example:
               date: "2024-03-15T14:30:00Z"
-              gallons: 10.2
-              costPerGallon: 3.55
+              Liters: 10.2
+              costPerLiter: 3.55
               totalCost: 36.21
               mileage: 15200
               station: "Chevron"
@@ -624,8 +624,8 @@ paths:
                 resource:
                   id: 2
                   date: "2024-03-15T14:30:00Z"
-                  gallons: 10.2
-                  costPerGallon: 3.55
+                  Liters: 10.2
+                  costPerLiter: 3.55
                   totalCost: 36.21
                   mileage: 15200
                   station: "Chevron"
@@ -659,8 +659,8 @@ paths:
                 resource:
                   id: 1
                   date: "2024-03-10T14:30:00Z"
-                  gallons: 12.5
-                  costPerGallon: 3.45
+                  Liters: 12.5
+                  costPerLiter: 3.45
                   totalCost: 43.13
                   mileage: 14500
                   station: "Shell"
@@ -685,7 +685,7 @@ paths:
             schema:
               $ref: "#/components/schemas/updateFuelRecord"
             example:
-              gallons: 12.8
+              Liters: 12.8
               totalCost: 44.16
               station: "Shell Plus"
       responses:
@@ -697,8 +697,8 @@ paths:
                 resource:
                   id: 1
                   date: "2024-03-10T14:30:00Z"
-                  gallons: 12.8
-                  costPerGallon: 3.45
+                  Liters: 12.8
+                  costPerLiter: 3.45
                   totalCost: 44.16
                   mileage: 14500
                   station: "Shell Plus"
@@ -775,11 +775,11 @@ paths:
                     estimatedCost: 25.00
                 fuelEfficiencyTrend:
                   - date: "2024-01-01"
-                    mpg: 27.8
+                    L100km: 27.8
                   - date: "2024-02-01"
-                    mpg: 28.2
+                    L100km: 28.2
                   - date: "2024-03-01"
-                    mpg: 28.5
+                    L100km: 28.5
                 costByCategory:
                   fuel: 895.42
                   maintenance: 350.25
@@ -842,7 +842,7 @@ paths:
                   id: 3
                   make: "Honda"
                   model: "Civic"
-                  mpg: 32.4
+                  L100km: 32.4
                 costTrend:
                   - month: "2024-01"
                     cost: 2586.23
@@ -1269,11 +1269,11 @@ components:
           type: string
           format: date-time
           example: "2024-03-10T14:30:00Z"
-        gallons:
+        Liters:
           type: number
           format: float
           example: 12.5
-        costPerGallon:
+        costPerLiter:
           type: number
           format: float
           example: 3.45
@@ -1302,8 +1302,8 @@ components:
       type: object
       required:
         - date
-        - gallons
-        - costPerGallon
+        - Liters
+        - costPerLiter
         - totalCost
         - mileage
       properties:
@@ -1311,12 +1311,12 @@ components:
           type: string
           format: date-time
           example: "2024-03-15T14:30:00Z"
-        gallons:
+        Liters:
           type: number
           format: float
           minimum: 0
           example: 10.2
-        costPerGallon:
+        costPerLiter:
           type: number
           format: float
           minimum: 0
@@ -1342,7 +1342,7 @@ components:
     updateFuelRecord:
       type: object
       properties:
-        gallons:
+        Liters:
           type: number
           format: float
           minimum: 0
@@ -1415,7 +1415,7 @@ components:
                 type: string
                 format: date
                 example: "2024-01-01"
-              mpg:
+              L100km:
                 type: number
                 format: float
                 example: 27.8
@@ -1504,7 +1504,7 @@ components:
             model:
               type: string
               example: "Civic"
-            mpg:
+            L100km:
               type: number
               format: float
               example: 32.4

@@ -1,5 +1,4 @@
-﻿// src/components/Dashboard.tsx
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -24,7 +23,7 @@ import {
   AlertTriangle,
   RefreshCw,
   TrendingUp,
-  DollarSign,
+  Euro,
   MapPin,
   Clock,
   ChevronRight,
@@ -37,20 +36,20 @@ interface UpcomingMaintenance {
   vehicleId: number;
   vehicleName: string;
   serviceType: string;
-  dueDate: string; // ISO String
+  dueDate: string;
   daysDue: number;
   estimatedCost: number;
 }
 
 interface MonthlyExpense {
-  name: string; // e.g., "Mar 2024"
+  name: string;
   fuel: number;
   maintenance: number;
 }
 
 interface FuelEfficiencyDataPoint {
-  name: string; // Month name
-  mpg: number;
+  name: string;
+  litersPer100Km: number;
 }
 
 interface VehicleStats {
@@ -59,23 +58,25 @@ interface VehicleStats {
   totalFuelCost: number;
   totalMaintenance: number;
   totalDistance: number;
-  avgMpg: number;
+  avgL100km: number;
+  totalLiters: number;
 }
 
 interface VehicleUsageData {
   name: string;
-  value: number; // Represents trip count
+  value: number;
 }
 
 const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [stats, setStats] = useState<VehicleStats>({
+    totalLiters: 0,
     totalVehicles: 0,
     totalTrips: 0,
     totalFuelCost: 0,
     totalMaintenance: 0,
     totalDistance: 0,
-    avgMpg: 0,
+    avgL100km: 0,
   });
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleCostData, setVehicleCostData] = useState<MonthlyExpense[]>([]);
@@ -137,7 +138,7 @@ const Dashboard: React.FC = () => {
     let tempFailedVehicles = 0;
 
     try {
-      const vehiclesResponse = await apiClient.get("/vehicles?pageSize=500"); // Fetch all accessible vehicles
+      const vehiclesResponse = await apiClient.get("/vehicles?pageSize=500");
       const vehicleData: Vehicle[] = extractResourcesFromResponse(
         vehiclesResponse.data,
       );
@@ -160,16 +161,15 @@ const Dashboard: React.FC = () => {
       const allFuelRecords: FuelRecord[] = [];
       const allMaintenanceRecords: MaintenanceRecord[] = [];
 
-      // Fetch details for *all* valid vehicles now
       const vehiclePromises = validVehicles.map(async (vehicle) => {
         try {
           const [tripsResponse, fuelResponse, maintenanceResponse] =
             await Promise.all([
-              apiClient.get(`/vehicles/${vehicle.id}/trips?pageSize=500`), // Fetch all trips
-              apiClient.get(`/vehicles/${vehicle.id}/fuelRecords?pageSize=500`), // Fetch all fuel
+              apiClient.get(`/vehicles/${vehicle.id}/trips?pageSize=500`),
+              apiClient.get(`/vehicles/${vehicle.id}/fuelRecords?pageSize=500`),
               apiClient.get(
                 `/vehicles/${vehicle.id}/maintenanceRecords?pageSize=500`,
-              ), // Fetch all maintenance
+              ),
             ]);
 
           const vehicleTrips = extractResourcesFromResponse(tripsResponse.data);
@@ -245,8 +245,11 @@ const Dashboard: React.FC = () => {
       0,
     );
 
-    let avgMpg = 0;
-    let validMpgCalculations = 0;
+    const totalLitersConsumedInPeriod = fuelRecordsInPeriod.reduce(
+      (sum, record) => sum + (record.liters || 0),
+      0,
+    );
+
     const fuelRecordsByVehicle = fuelRecordsInPeriod.reduce(
       (acc, record) => {
         if (!acc[record.vehicleId]) acc[record.vehicleId] = [];
@@ -256,28 +259,47 @@ const Dashboard: React.FC = () => {
       {} as Record<number, FuelRecord[]>,
     );
 
+    let totalKmForEfficiency = 0;
+    let totalLitersForEfficiency = 0;
+
     Object.values(fuelRecordsByVehicle).forEach((records) => {
       if (records.length < 2) return;
       const sortedRecords = [...records].sort((a, b) => a.mileage - b.mileage);
-      let vehicleDistance = 0;
-      let vehicleGallons = 0;
-      for (let i = 1; i < sortedRecords.length; i++) {
-        const current = sortedRecords[i];
-        const previous = sortedRecords[i - 1];
-        if (current.fullTank && previous.fullTank) {
-          const distance = current.mileage - previous.mileage;
-          if (distance > 0 && distance < 1500) {
-            vehicleDistance += distance;
-            vehicleGallons += current.gallons;
-          }
+      const fullTankSegments = [];
+      for (let i = 0; i < sortedRecords.length - 1; i++) {
+        if (sortedRecords[i].fullTank && sortedRecords[i + 1].fullTank) {
+          fullTankSegments.push({
+            previous: sortedRecords[i],
+            current: sortedRecords[i + 1],
+          });
         }
       }
-      if (vehicleGallons > 0) {
-        avgMpg += vehicleDistance / vehicleGallons;
-        validMpgCalculations++;
+
+      const segmentsToUse = fullTankSegments;
+      if (segmentsToUse.length === 0 && sortedRecords.length >= 2) {
+        for (let i = 0; i < sortedRecords.length - 1; i++) {
+          segmentsToUse.push({
+            previous: sortedRecords[i],
+            current: sortedRecords[i + 1],
+          });
+        }
+      }
+
+      for (const segment of segmentsToUse) {
+        const distance = segment.current.mileage - segment.previous.mileage;
+        const litersConsumed = segment.current.liters;
+
+        if (distance > 0 && distance < 2000 && litersConsumed > 0) {
+          totalKmForEfficiency += distance;
+          totalLitersForEfficiency += litersConsumed;
+        }
       }
     });
-    avgMpg = validMpgCalculations > 0 ? avgMpg / validMpgCalculations : 0;
+
+    const overallAvgL100km =
+      totalLitersForEfficiency > 0 && totalKmForEfficiency > 0
+        ? (totalLitersForEfficiency / totalKmForEfficiency) * 100
+        : 0;
 
     setStats({
       totalVehicles,
@@ -285,7 +307,8 @@ const Dashboard: React.FC = () => {
       totalFuelCost,
       totalMaintenance,
       totalDistance,
-      avgMpg,
+      avgL100km: Math.round(overallAvgL100km * 10) / 10,
+      totalLiters: totalLitersConsumedInPeriod,
     });
     generateChartData(
       vehiclesData,
@@ -293,7 +316,7 @@ const Dashboard: React.FC = () => {
       fuelRecordsInPeriod,
       maintenanceRecordsInPeriod,
     );
-    generateUpcomingMaintenance(vehiclesData, maintenanceRecords); // Use *all* maintenance records
+    generateUpcomingMaintenance(vehiclesData, maintenanceRecords);
   };
 
   const generateChartData = (
@@ -362,7 +385,7 @@ const Dashboard: React.FC = () => {
     const sortedRecords = [...fuelRecords].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
-    const vehicleMonthlyData = new Map<string, FuelRecord[]>(); // Key: vehicleId-YYYY-MM
+    const vehicleMonthlyData = new Map<string, FuelRecord[]>();
     sortedRecords.forEach((record) => {
       if (!record.date || !record.vehicleId) return;
       try {
@@ -377,50 +400,62 @@ const Dashboard: React.FC = () => {
       }
     });
 
-    const monthlyMpgMap = new Map<
+    const monthlyEfficiencyMap = new Map<
       string,
-      { totalMpg: number; count: number }
+      { monthName: string; totalKm: number; totalLiters: number }
     >();
-    vehicleMonthlyData.forEach((records) => {
-      if (records.length < 2) return;
-      records.sort((a, b) => a.mileage - b.mileage);
-      let monthDistance = 0;
-      let monthGallons = 0;
-      for (let i = 1; i < records.length; i++) {
-        const current = records[i];
-        const previous = records[i - 1];
+
+    vehicleMonthlyData.forEach((recordsForVehicleInMonth) => {
+      if (recordsForVehicleInMonth.length < 2) return;
+      const sortedRecords = [...recordsForVehicleInMonth].sort(
+        (a, b) => a.mileage - b.mileage,
+      );
+
+      let monthKey = "";
+      if (sortedRecords.length > 0) {
+        const date = new Date(sortedRecords[0].date);
+        monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      }
+      if (!monthKey) return;
+
+      if (!monthlyEfficiencyMap.has(monthKey)) {
+        const date = new Date(sortedRecords[0].date);
+        monthlyEfficiencyMap.set(monthKey, {
+          monthName: date.toLocaleDateString("en-US", {
+            month: "short",
+            year: "numeric",
+          }),
+          totalKm: 0,
+          totalLiters: 0,
+        });
+      }
+      const monthStat = monthlyEfficiencyMap.get(monthKey)!;
+
+      for (let i = 1; i < sortedRecords.length; i++) {
+        const current = sortedRecords[i];
+        const previous = sortedRecords[i - 1];
         if (current.fullTank && previous.fullTank) {
-          const dist = current.mileage - previous.mileage;
-          if (dist > 0 && dist < 1500) {
-            monthDistance += dist;
-            monthGallons += current.gallons;
+          const distKm = current.mileage - previous.mileage;
+          const litersUsed = current.liters;
+          if (distKm > 0 && distKm < 2000 && litersUsed > 0) {
+            monthStat.totalKm += distKm;
+            monthStat.totalLiters += litersUsed;
           }
         }
-      }
-      if (monthGallons > 0) {
-        const mpg = monthDistance / monthGallons;
-        const date = new Date(records[0].date);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-        if (!monthlyMpgMap.has(monthKey))
-          monthlyMpgMap.set(monthKey, { totalMpg: 0, count: 0 });
-        const currentMonthStat = monthlyMpgMap.get(monthKey)!;
-        currentMonthStat.totalMpg += mpg;
-        currentMonthStat.count += 1;
       }
     });
 
     const trendData: FuelEfficiencyDataPoint[] = [];
-    Array.from(monthlyMpgMap.entries())
-      .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
-      .forEach(([monthKey, data]) => {
-        const avgMpg = data.count > 0 ? data.totalMpg / data.count : 0;
-        const [year, month] = monthKey.split("-");
-        const monthName = new Date(
-          parseInt(year),
-          parseInt(month) - 1,
-          1,
-        ).toLocaleDateString("en-US", { month: "short", year: "numeric" });
-        trendData.push({ name: monthName, mpg: Math.round(avgMpg * 10) / 10 });
+    Array.from(monthlyEfficiencyMap.values())
+      .sort((a, b) => a.monthName.localeCompare(b.monthName))
+      .forEach((data) => {
+        if (data.totalLiters > 0 && data.totalKm > 0) {
+          const l100km = (data.totalLiters / data.totalKm) * 100;
+          trendData.push({
+            name: data.monthName,
+            litersPer100Km: Math.round(l100km * 10) / 10,
+          });
+        }
       });
     return trendData;
   };
@@ -454,7 +489,7 @@ const Dashboard: React.FC = () => {
         .filter((rec) => rec.vehicleId === vehicle.id)
         .sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-        ); // Sort desc by date
+        );
 
       const latestServiceByType = new Map<string, MaintenanceRecord>();
       vehicleRecords.forEach((rec) => {
@@ -463,14 +498,12 @@ const Dashboard: React.FC = () => {
         }
       });
 
-      // Process services with history
       latestServiceByType.forEach((latestRecord, serviceType) => {
         let dueDate: Date | null = null;
         if (latestRecord.nextServiceDue) {
           dueDate = new Date(latestRecord.nextServiceDue);
         } else {
-          // Estimate based on standard intervals if no explicit due date
-          let intervalDays = 90; // Default
+          let intervalDays = 90;
           if (serviceType.toLowerCase().includes("oil")) intervalDays = 90;
           else if (serviceType.toLowerCase().includes("tire"))
             intervalDays = 180;
@@ -478,7 +511,7 @@ const Dashboard: React.FC = () => {
             intervalDays = 365;
           else if (serviceType.toLowerCase().includes("inspection"))
             intervalDays = 365;
-          else intervalDays = 180; // Default estimate
+          else intervalDays = 180;
 
           const lastServiceDate = new Date(latestRecord.date);
           dueDate = new Date(
@@ -491,30 +524,28 @@ const Dashboard: React.FC = () => {
             (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
           );
           if (daysDue <= 100) {
-            // Only show if due within 100 days
             upcoming.push({
               vehicleId: vehicle.id,
               vehicleName: `${vehicle.make} ${vehicle.model}`,
               serviceType: serviceType,
               dueDate: dueDate.toISOString(),
               daysDue: daysDue,
-              estimatedCost: latestRecord.cost, // Use last cost as estimate
+              estimatedCost: latestRecord.cost,
             });
           }
         }
       });
 
-      // Add default suggestions ONLY if specific common services are MISSING from history
       const ageInMonths =
         (today.getFullYear() - vehicle.year) * 12 +
-        (today.getMonth() - new Date(vehicle.createdAt ?? today).getMonth()); // Approximate age
+        (today.getMonth() - new Date(vehicle.createdAt ?? today).getMonth());
 
       if (
         !latestServiceByType.has("Oil Change") &&
         (ageInMonths % 3 === 0 || vehicle.currentMileage % 3000 <= 500)
       ) {
         const estDueDate = new Date(today);
-        estDueDate.setDate(today.getDate() + 30); // Estimate due in 30 days
+        estDueDate.setDate(today.getDate() + 30);
         upcoming.push({
           vehicleId: vehicle.id,
           vehicleName: `${vehicle.make} ${vehicle.model}`,
@@ -529,7 +560,7 @@ const Dashboard: React.FC = () => {
         (ageInMonths % 6 === 0 || vehicle.currentMileage % 6000 <= 500)
       ) {
         const estDueDate = new Date(today);
-        estDueDate.setDate(today.getDate() + 45); // Estimate due in 45 days
+        estDueDate.setDate(today.getDate() + 45);
         upcoming.push({
           vehicleId: vehicle.id,
           vehicleName: `${vehicle.make} ${vehicle.model}`,
@@ -541,10 +572,9 @@ const Dashboard: React.FC = () => {
       }
     });
 
-    upcoming.sort((a, b) => a.daysDue - b.daysDue); // Sort by soonest due
+    upcoming.sort((a, b) => a.daysDue - b.daysDue);
     setUpcomingMaintenance(upcoming);
   };
-  // --- End Upcoming Maintenance Logic ---
 
   const formatDate = (dateString: string) => {
     try {
@@ -560,9 +590,9 @@ const Dashboard: React.FC = () => {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("lt-LT", {
       style: "currency",
-      currency: "USD",
+      currency: "EUR",
     }).format(value);
   };
 
@@ -616,8 +646,7 @@ const Dashboard: React.FC = () => {
             </div>
           ))}{" "}
         </div>
-      ) : // Main Content
-      vehicles.length > 0 && !error ? (
+      ) : vehicles.length > 0 && !error ? (
         <>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -668,24 +697,24 @@ const Dashboard: React.FC = () => {
                 <MapPin className="h-8 w-8 text-indigo-500" />
               </div>{" "}
               <p className="text-2xl font-bold">
-                {stats.totalDistance.toFixed(1)} miles
+                {stats.totalDistance.toFixed(1)} km
               </p>{" "}
             </div>
             <div className="bg-white rounded-lg shadow-md p-6 transition-transform hover:scale-105">
               {" "}
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-gray-500 font-medium">Average MPG</h3>
+                <h3 className="text-gray-500 font-medium">Average L/100km</h3>
                 <TrendingUp className="h-8 w-8 text-teal-500" />
               </div>{" "}
               <p className="text-2xl font-bold">
-                {stats.avgMpg.toFixed(1)} MPG
+                {stats.avgL100km.toFixed(1)} L/100km
               </p>{" "}
             </div>
             <div className="bg-white rounded-lg shadow-md p-6 transition-transform hover:scale-105">
               {" "}
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-gray-500 font-medium">Total Cost</h3>
-                <DollarSign className="h-8 w-8 text-amber-500" />
+                <Euro className="h-8 w-8 text-amber-500" />
               </div>{" "}
               <p className="text-2xl font-bold">
                 {formatCurrency(stats.totalFuelCost + stats.totalMaintenance)}
@@ -694,16 +723,13 @@ const Dashboard: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-6 transition-transform hover:scale-105">
               {" "}
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-gray-500 font-medium">Cost Per Mile</h3>
+                <h3 className="text-gray-500 font-medium">Cost Per Liter</h3>
                 <Clock className="h-8 w-8 text-rose-500" />
               </div>{" "}
               <p className="text-2xl font-bold">
-                {stats.totalDistance > 0
-                  ? formatCurrency(
-                      (stats.totalFuelCost + stats.totalMaintenance) /
-                        stats.totalDistance,
-                    )
-                  : "$0.00"}
+                {stats.totalLiters > 0
+                  ? formatCurrency(stats.totalFuelCost / stats.totalLiters)
+                  : formatCurrency(0)}
               </p>{" "}
             </div>
           </div>
@@ -761,12 +787,28 @@ const Dashboard: React.FC = () => {
                     {" "}
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
-                    <YAxis domain={["dataMin - 2", "dataMax + 2"]} />{" "}
-                    <Tooltip formatter={(value) => `${value} MPG`} /> <Legend />{" "}
+                    <YAxis
+                      label={{
+                        value: "L/100km",
+                        angle: -90,
+                        position: "insideLeft",
+                        offset: -5,
+                      }}
+                      domain={["dataMin - 2", "dataMax + 2"]}
+                      tickFormatter={(value) =>
+                        typeof value === "number" ? value.toFixed(1) : value
+                      }
+                    />{" "}
+                    <Tooltip
+                      formatter={(value) =>
+                        `${typeof value === "number" ? value.toFixed(1) : value} L/100km`
+                      }
+                    />{" "}
+                    <Legend />{" "}
                     <Area
                       type="monotone"
-                      dataKey="mpg"
-                      name="MPG"
+                      dataKey="litersPer100Km"
+                      name="L/100km"
                       stroke="#8884d8"
                       fill="#8884d8"
                       fillOpacity={0.3}
@@ -849,7 +891,6 @@ const Dashboard: React.FC = () => {
                           {formatDate(item.dueDate)}
                         </p>{" "}
                       </div>{" "}
-                      {/* *** FIX: Link to correct maintenance page *** */}{" "}
                       <Link
                         to={`/vehicles/${item.vehicleId}/maintenance`}
                         className="ml-auto text-xs text-blue-600 hover:underline"
@@ -906,7 +947,7 @@ const Dashboard: React.FC = () => {
                           {trip.purpose || "N/A"}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">
-                          {trip.distance?.toFixed(1) || "0"} miles
+                          {trip.distance?.toFixed(1) || "0"} km
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">
                           {vehicles.find((v) => v.id === trip.vehicleId)
@@ -922,7 +963,6 @@ const Dashboard: React.FC = () => {
               <p className="text-gray-500 text-center py-4">No recent trips</p>
             )}
             <div className="flex justify-center mt-4">
-              {/* *** FIX: Link to vehicles list instead of first vehicle's trips *** */}
               <Link
                 to="/vehicles"
                 className="text-blue-600 hover:text-blue-800 flex items-center"
@@ -933,7 +973,6 @@ const Dashboard: React.FC = () => {
           </div>
         </>
       ) : (
-        // Show message if no vehicles and not loading/error
         !isLoading &&
         !error && (
           <div className="text-center py-10 text-gray-500">
@@ -969,7 +1008,7 @@ const Dashboard: React.FC = () => {
           <div>
             <p className="text-gray-700">
               Charts: {vehicleCostData.length > 0 ? "Expenses ✓" : "Expenses ✗"}
-              {fuelEfficiencyData.length > 0 ? " | MPG ✓" : " | MPG ✗"}
+              {fuelEfficiencyData.length > 0 ? " | L/100km ✓" : " | L/100km ✗"}
               {vehicleUsageData.length > 0 ? " | Usage ✓" : " | Usage ✗"}
             </p>
             <p className="text-gray-700">

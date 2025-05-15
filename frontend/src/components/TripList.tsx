@@ -1,5 +1,4 @@
-﻿// src/components/TripList.tsx
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -16,7 +15,7 @@ import {
   ChevronRight,
   RefreshCw,
   Loader,
-  Map, // Wrench removed
+  Map,
 } from "lucide-react";
 import apiClient from "../api/client";
 import { Trip, Vehicle } from "../types";
@@ -27,7 +26,6 @@ import {
   QueryKey,
 } from "@tanstack/react-query";
 
-// Define Pagination type
 interface PaginationInfo {
   currentPage: number;
   pageSize: number;
@@ -36,12 +34,10 @@ interface PaginationInfo {
   hasPrevious: boolean;
   hasNext: boolean;
 }
-// Define API response structure
 interface TripApiResponse {
   resource: Array<{ resource: Trip; links: any[] }>;
   links: any[];
 }
-// Define Query Data structure
 interface TripQueryData {
   trips: Trip[];
   pagination: PaginationInfo;
@@ -72,7 +68,6 @@ const TripList = () => {
     hasNext: false,
   });
 
-  // Debounce search term and reset page
   useEffect(() => {
     const handler = setTimeout(() => {
       if (debouncedSearchTerm !== searchTerm) {
@@ -112,7 +107,6 @@ const TripList = () => {
     }
   };
 
-  // --- Data Fetching with React Query ---
   const queryKey = useMemo(
     () =>
       [
@@ -202,15 +196,13 @@ const TripList = () => {
       return { trips: validTrips, pagination: paginationInfo };
     },
     enabled: !!vehicleId,
-    staleTime: 1 * 60 * 1000,
-    gcTime: 5 * 60 * 1000, // Use gcTime
-    // keepPreviousData: true, // Removed
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   const trips = queryResult?.trips ?? [];
   const currentPagination = pagination;
 
-  // --- Mutations ---
   const createTripMutation = useMutation({
     mutationFn: async (tripData: Omit<Trip, "id" | "vehicleId">) => {
       if (!vehicleId) throw new Error("Cannot create trip without vehicleId");
@@ -308,7 +300,6 @@ const TripList = () => {
     },
   });
 
-  // --- Event Handlers & Helpers ---
   const handlePageChange = (newPage: number) => {
     if (
       newPage >= 1 &&
@@ -407,7 +398,6 @@ const TripList = () => {
   const goBack = () => navigate("/vehicles");
   const navigateToGpsTracking = () => navigate("/tracking");
 
-  // Formatting functions
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return "N/A";
     try {
@@ -447,7 +437,6 @@ const TripList = () => {
     }
   };
 
-  // Client-side filtering (REMOVE if backend handles search)
   const displayTrips = useMemo(() => {
     if (!debouncedSearchTerm) return trips;
     return trips.filter(
@@ -513,7 +502,7 @@ const TripList = () => {
               </div>
               <input
                 type="text"
-                placeholder="Search trips (client-side)..."
+                placeholder="Search trips..."
                 className="pl-10 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -530,7 +519,6 @@ const TripList = () => {
                 />{" "}
                 Refresh
               </button>
-              {/* <button className="flex items-center text-gray-600 px-3 py-2 border rounded-lg hover:bg-gray-50"><Filter className="h-5 w-5 mr-2" /> Filter</button> */}
             </div>
           </div>
         </div>
@@ -610,7 +598,7 @@ const TripList = () => {
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
                       <div className="flex items-center">
                         <Route className="h-4 w-4 mr-1" />
-                        {trip.distance?.toFixed(1) || "0"} miles
+                        {trip.distance?.toFixed(1) || "0"} km
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-1" />
@@ -626,7 +614,6 @@ const TripList = () => {
                   </div>
                   {/* Action Buttons */}
                   <div className="flex space-x-2 mt-4 md:mt-0 flex-shrink-0 self-start md:self-center">
-                    {/* Removed Maintenance Button */}
                     <button
                       onClick={() => {
                         setCurrentTrip(trip);
@@ -757,7 +744,7 @@ const TripList = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Distance (miles) <span className="text-red-500">*</span>
+                    Distance (km) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -772,7 +759,7 @@ const TripList = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fuel Used (gallons)
+                    Fuel Used (liters)
                   </label>
                   <input
                     type="number"

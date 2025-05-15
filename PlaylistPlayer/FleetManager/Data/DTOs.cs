@@ -1,6 +1,4 @@
-﻿// FleetManager/Data/DTOs.cs
-
-using FluentValidation;
+﻿using FluentValidation;
 
 namespace FleetManager.Data;
 
@@ -107,8 +105,8 @@ public record UpdateMaintenanceRecordDto(
 public record FuelRecordDto(
     int Id,
     DateTimeOffset Date,
-    double Gallons,
-    decimal CostPerGallon,
+    double Liters,
+    decimal CostPerLiter,
     decimal TotalCost,
     int Mileage,
     string Station,
@@ -119,8 +117,8 @@ public record FuelRecordDto(
 
 public record CreateFuelRecordDto(
     DateTimeOffset Date,
-    double Gallons,
-    decimal CostPerGallon,
+    double Liters,
+    decimal CostPerLiter,
     decimal TotalCost,
     int Mileage,
     string? Station,
@@ -128,18 +126,19 @@ public record CreateFuelRecordDto(
 );
 
 public record UpdateFuelRecordDto(
-    double? Gallons,
+    double? Liters,
     decimal? TotalCost,
     string? Station,
     bool? FullTank
 );
 
+// Analytics DTOs
 public record VehicleAnalyticsDto(
     decimal TotalCost,
     int Mileage,
-    decimal CostPerMile,
+    decimal CostPerKm,
     int TotalTrips,
-    double FuelEfficiency,
+    double FuelEfficiencyLitersPer100Km,
     decimal MaintenanceCosts,
     decimal FuelCosts,
     IEnumerable<UpcomingMaintenanceDto> UpcomingMaintenance,
@@ -150,7 +149,7 @@ public record VehicleAnalyticsDto(
 
 public record UpcomingMaintenanceDto(string Type, DateTimeOffset DueDate, decimal EstimatedCost);
 
-public record FuelEfficiencyTrendDto(DateTimeOffset Date, double Mpg);
+public record FuelEfficiencyTrendDto(DateTimeOffset Date, double LitersPer100Km);
 
 public record CostByCategoryDto(decimal Fuel, decimal Maintenance, decimal Repairs);
 
@@ -161,8 +160,8 @@ public record FleetAnalyticsDto(
     int TotalMileage,
     decimal TotalCost,
     Dictionary<string, decimal> CostBreakdown,
-    decimal AverageCostPerMile,
-    double AverageFuelEfficiency,
+    decimal AverageCostPerKm,
+    double AverageFuelEfficiencyLitersPer100Km,
     MostUsedVehicleDto MostUsedVehicle,
     MostEfficientVehicleDto MostEfficientVehicle,
     IEnumerable<CostTrendDto> CostTrend,
@@ -171,7 +170,7 @@ public record FleetAnalyticsDto(
 
 public record MostUsedVehicleDto(int Id, string Make, string Model, int Trips);
 
-public record MostEfficientVehicleDto(int Id, string Make, string Model, double Mpg);
+public record MostEfficientVehicleDto(int Id, string Make, string Model, double LitersPer100Km);
 
 public record CostTrendDto(string Month, decimal Cost);
 
@@ -252,7 +251,6 @@ public class CreateMaintenanceRecordDtoValidator : AbstractValidator<CreateMaint
 
 public class UpdateMaintenanceRecordDtoValidator : AbstractValidator<UpdateMaintenanceRecordDto>
 {
-    // Validate only if fields are provided
     public UpdateMaintenanceRecordDtoValidator()
     {
         RuleFor(x => x.ServiceType).NotEmpty().Length(1, 100).When(x => x.ServiceType != null);
@@ -273,10 +271,10 @@ public class CreateFuelRecordDtoValidator : AbstractValidator<CreateFuelRecordDt
     public CreateFuelRecordDtoValidator()
     {
         RuleFor(x => x.Date).NotEmpty();
-        RuleFor(x => x.Gallons).GreaterThan(0);
-        RuleFor(x => x.CostPerGallon).GreaterThan(0);
+        RuleFor(x => x.Liters).GreaterThan(0); // CHANGED
+        RuleFor(x => x.CostPerLiter).GreaterThan(0); // CHANGED
         RuleFor(x => x.TotalCost).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.Mileage).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Mileage).GreaterThanOrEqualTo(0); // Assumed KM
         RuleFor(x => x.Station).Length(0, 100);
     }
 }
@@ -285,8 +283,8 @@ public class UpdateFuelRecordDtoValidator : AbstractValidator<UpdateFuelRecordDt
 {
     public UpdateFuelRecordDtoValidator()
     {
-        RuleFor(x => x.Gallons).GreaterThan(0).When(x => x.Gallons.HasValue);
+        RuleFor(x => x.Liters).GreaterThan(0).When(x => x.Liters.HasValue); // CHANGED
         RuleFor(x => x.TotalCost).GreaterThanOrEqualTo(0).When(x => x.TotalCost.HasValue);
-        RuleFor(x => x.Station).Length(0, 100);
+        RuleFor(x => x.Station).Length(0, 100).When(x => x.Station != null);
     }
 }
