@@ -2,8 +2,8 @@
 import { toast } from "sonner";
 
 export const apiClient = axios.create({
-  //baseURL: "https://octopus-app-3t93j.ondigitalocean.app/api",
-  baseURL: "http://localhost:5006/api",
+  baseURL: "https://octopus-app-3t93j.ondigitalocean.app/api",
+  //baseURL: "http://localhost:5006/api",
   headers: {
     "Content-Type": "application/json",
   },
