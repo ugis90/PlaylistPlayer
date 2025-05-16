@@ -2,18 +2,18 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 WORKDIR /source
 
+# Copy solution file
 COPY PlaylistPlayer/FleetManager.sln .
-COPY PlaylistPlayer/FleetManager/ ./FleetManager/
-# If you have other .csproj files referenced by the .sln, copy them too
-# e.g. COPY OtherProjectFolder/OtherProject.csproj ./OtherProjectFolder/
 
+# Copy main project
+COPY PlaylistPlayer/FleetManager/ ./FleetManager/
+
+COPY PlaylistPlayer/FleetManager.Tests/ ./FleetManager.Tests/
+
+# Restore dependencies for the entire solution
 RUN dotnet restore FleetManager.sln
 
-# COPY all source code for the main project and any referenced projects
-# This ensures all .cs files are available for publish
-# COPY PlaylistPlayer/FleetManager/ ./FleetManager/ # Already done
-# COPY OtherProjectFolder/ ./OtherProjectFolder/ # If applicable
-
+# Publish the specific FleetManager project
 RUN dotnet publish ./FleetManager/FleetManager.csproj -c Release -o /app/out --no-restore
 
 # --- Stage 2: Runtime ---
